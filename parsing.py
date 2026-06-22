@@ -2,19 +2,22 @@
 
 color_good = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'black', 'white']
 
-def split_check_format(hub:str, separateur:str) -> list:
-    
-    new_tab =[]
+def split_check_format(hub: str, separateur: str) -> list:
+    new_tab = []
     temp = ""
+    dans_crochets = False
     for char in hub:
-        if char is not separateur:
-            temp += char
-        else:
+        if char == "[":
+            dans_crochets = True
+        elif char == "]":
+            dans_crochets = False
+        if char == separateur and not dans_crochets:
             new_tab.append(temp)
             temp = ""
+        else:
+            temp += char
     new_tab.append(temp)
     return new_tab
-
 def check_format_hub(hub:str):
     hub_split = split_check_format(hub, " ")
     print(hub_split)
@@ -122,7 +125,6 @@ class ParsingFiles:
             if "hub:" in line and "end_hub" not in line and "start_hub" not in line:
                 self.hub.update({f"hub_{i}":hub_good_format(line)}) 
                 i+=1
-
 
 
 if __name__ == '__main__':
