@@ -191,12 +191,15 @@ class ParsingFiles:
 
     def check_connection(self):
         all_name_hub = []
+        all_name_connection = []
         all_name_hub.append(self.start_hub.name)
         all_name_hub.append(self.end_hub.name)
-        print(self.hub)
         for hub_name in self.hub:
-            print(hub_name)
-            # all_name_hub.append(hub_name.name)
+            all_name_hub.append(hub_name.name)
+        for connection_name in self.connection.values():
+            print(connection_name)
+            if len(connection_name) != 2:
+                raise "argument on connection is not good"
         print(all_name_hub)
 
 
@@ -204,8 +207,11 @@ class ParsingFiles:
         i = 0
         for line in self.file_split:
             if line.startswith("connection: "):
-                content = line.split("connection:", 1)[1].strip()
-                self.connection.update({i:content.split("-")})
+                try:
+                    content = line.split("connection:", 1)[1].strip()
+                    self.connection.update({i:content.split("-")})
+                except Exception:
+                    raise ValueError(f"[Error] Invalid connection syntax on line: '{line}'") 
                 i+=1
         self.check_connection()
 
