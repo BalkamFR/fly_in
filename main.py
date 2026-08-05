@@ -5,8 +5,8 @@ import pygame
 
 def main():
     files_parsing = pars_file("maps/medium/02_circular_loop.txt")
-    # display_screen = Screen(files_parsing)
-    # display_screen.display()
+    display_screen = Screen(files_parsing)
+    display_screen.display()
 
 if __name__ == '__main__':
     try:

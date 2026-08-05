@@ -416,7 +416,7 @@ class Screen:
 
             try:
                 drone_img = pygame.image.load(drone.img_drone)
-                drone_img = pygame.transform.scale(drone_img, (40, 40))
+                drone_img = pygame.transform.scale(drone_img, (80, 80))
                 rect = drone_img.get_rect(center=(cx, cy))
                 self.window.blit(drone_img, rect)
             except (pygame.error, FileNotFoundError):
