@@ -1,6 +1,6 @@
 MYPY_FLAGS = --warn-return-any --warn-unused-ignores --ignore-missing-imports \
 --disallow-untyped-defs --check-untyped-defs
-MAIN = parsing.py
+MAIN = main.py
 CONFIG = config.txt
 
 .PHONY: run, install, clean, build, lint

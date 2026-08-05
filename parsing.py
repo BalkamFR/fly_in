@@ -1,6 +1,6 @@
 
 
-color_good = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'black', 'white']
+color_good = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'black', 'white', 'cyan', 'brown', 'lime', 'magenta', 'gold']
 
 def split_check_format(hub: str, separateur: str) -> list:
     new_tab = []
@@ -24,7 +24,6 @@ def split_check_format(hub: str, separateur: str) -> list:
 
 def check_format_hub(hub: str):
     hub_split = split_check_format(hub, " ")
-    
     if len(hub_split) != 5:
         raise TypeError(f"nbr argument on hub is not good({hub_split})")
     try:
@@ -50,7 +49,7 @@ def check_format_hub(hub: str):
             raise TabError("Format setting hub is not good")
             
         key, value = split_color[0], split_color[1]
-        if key != "color" and key != "max_drones":
+        if key != "color" and key != "max_drones" and key != "zone":
             raise TabError(f"{key} format is not good")
         
         thisdict[key] = value
@@ -73,23 +72,14 @@ def check_double(files:str, check_double1:str, check_double2:str):
     return [res1, res2]
 
 def open_files(path_file:str) -> str:
+    files = ""
     with open(path_file) as f:
-        return f.read()
-
-def pars_file(name_file:str):
-    files_str = open_files(name_file)
-    file_split = files_str.split('\n')
-    check_double(file_split, "start_hub","end_hub")
-    for line in file_split:
-        if "hub" in line:
-            check_format_hub(line)
-    maps = ParsingFiles(file_split)
-    print(f"nb drone {maps.nb_drone}")
-    print(f"start hub {maps.start_hub}")
-    print(f"end hub {maps.end_hub}")
-    print(f"maps hub {maps.hub}")
-    print(f"connection: {maps.connection}")
-
+        nom_du_fichier = f.name.split("/")[-1]
+        files += nom_du_fichier
+        files += "\n" 
+        files += f.read()
+        print(files)
+        return files
 
 
 class Hub:
@@ -112,6 +102,19 @@ class Hub:
 
         self.neighbors: list[dict] = []
         self.current_drones: list = []
+
+
+    def get_pos(self):
+        return (self.x, self.y)
+
+    def remove_drone_hub(self, drone):
+        print(self.current_drones)
+        self.current_drones.remove(drone)
+
+    def add_drone_hub(self, drone):
+        self.current_drones.append(drone)
+        print(drone)
+
     def __repr__(self) -> str:
             return (
                 f"Hub(name='{self.name}', pos=({self.x}, {self.y}), "
@@ -121,7 +124,6 @@ class Hub:
 
 def hub_good_format(line: str) -> Hub:
     content = line.split(":", 1)[1].strip()
-
     if "[" in content and "]" in content:
         main_part, options_part = content.split("[", 1)
         options_str = options_part.rstrip("]").strip()
@@ -158,8 +160,6 @@ def hub_good_format(line: str) -> Hub:
     return hub
 
 
-
-
 class ParsingFiles:
     def __init__(self, file_split:str):
         self.file_split = file_split
@@ -167,10 +167,15 @@ class ParsingFiles:
         self.start_hub = {}
         self.end_hub = {}
         self.hub = []
+        self.all_name_hub = []
+        self.name_file = file_split[0]
         self.connection = {}
         self.nb_drone_check()
         self.hub_check()
         self.create_connection()
+        self.control_drone = ControlDrone(self)
+
+
 
     def nb_drone_check(self):
         for line in self.file_split:
@@ -190,17 +195,31 @@ class ParsingFiles:
 
 
     def check_connection(self):
-        all_name_hub = []
         all_name_connection = []
-        all_name_hub.append(self.start_hub.name)
-        all_name_hub.append(self.end_hub.name)
+        self.all_name_hub.append(self.start_hub.name)
+        self.all_name_hub.append(self.end_hub.name)
+        seen_pairs = set()
         for hub_name in self.hub:
-            all_name_hub.append(hub_name.name)
+            self.all_name_hub.append(hub_name.name)
         for connection_name in self.connection.values():
-            print(connection_name)
             if len(connection_name) != 2:
-                raise "argument on connection is not good"
-        print(all_name_hub)
+                raise ValueError(f"line: ({connection_name}) is not good")
+            pair = tuple(sorted(connection_name))
+            if pair in seen_pairs:
+                raise ValueError(f"Duplicate connection is forbidden: {connection_name[0]}-{connection_name[1]}")
+            if connection_name[0] == connection_name[1]:
+                raise ValueError(f"auto connection is forbidden: {connection_name[0]}-{connection_name[1]}")
+            seen_pairs.add(pair)
+            all_name_connection.append(connection_name[0])
+            all_name_connection.append(connection_name[1].split()[0])
+        for connection in all_name_connection:
+            if connection not in self.all_name_hub and "max_link_capacity=" not in connection:
+                raise ValueError(f"{connection} is not hub")
+        if self.start_hub.name not in all_name_connection:
+            raise ValueError(f"[Error] The start hub '{self.start_hub.name}' is isolated (has no connections).")
+
+        if self.end_hub.name not in all_name_connection:
+            raise ValueError(f"[Error] The end hub '{self.end_hub.name}' is isolated (has no connections).")
 
 
     def create_connection(self):
@@ -226,9 +245,17 @@ class ParsingFiles:
                 self.hub.append(hub_good_format(line)) 
                 i+=1
 
+from drone import ControlDrone
 
-if __name__ == '__main__':
-    try:
-        pars_file("maps/easy/01_linear_path.txt")
-    except BaseException as e:
-        print(e)
+def pars_file(name_file:str) -> ParsingFiles:
+    files_str = open_files(name_file)
+    file_split = files_str.split('\n')
+    check_double(file_split, "start_hub","end_hub")
+    for line in file_split:
+        if "hub:" in line:
+            check_format_hub(line)
+    maps = ParsingFiles(file_split)
+    # control_drone = ControlDrone(maps)
+
+    return maps
+
