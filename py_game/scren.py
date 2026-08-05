@@ -76,7 +76,6 @@ class Screen:
                         move_drone += 1
                     print(f"name_espace {drone_0.hub_select}")
                     print("espace")
-            print(animation)
             for drone in self.control_drones.all_drone:
                 drone.draw_animation()
             self.window.blit(self.background, (0, 0))

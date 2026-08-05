@@ -16,7 +16,6 @@ class Drone:
     def move_drone_hub(self):
         cord2 = (self.path[1].x, self.path[1].y)
 
-        print ("adwq")
         self.pos_x = cord2[0]
         self.pos_y = cord2[1]
 
@@ -26,7 +25,7 @@ class Drone:
         self.hub_select.remove_drone_hub(self)
         self.hub_select = hub_select_param
         self.hub_select.add_drone_hub(self)
-        
+
         self.calc_animation(hub_select_param)
         print(f"move {self.name_drone} to hub {self.hub_select.name}")
 
