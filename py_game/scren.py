@@ -68,13 +68,11 @@ class Screen:
                         if self.menu_home.collidepoint(event.pos):
                             page = "start_page"
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    drone = None
                     drone_0:Drone = self.control_drones.all_drone[0]
-                    if move_drone == len(self.setting_maps.hub):
-                        drone_0.calc_animation(self.setting_maps.end_hub)
-                    else:
-                        drone_0.calc_animation(self.setting_maps.hub[move_drone])
-                        move_drone += 1
-                    print(f"name_espace {drone_0.hub_select}")
+                    from algo.astar import a_star
+                    path_to_go = a_star(self.setting_maps.start_hub, self.setting_maps.end_hub)
+                    drone_0.move_drone_to_end(path_to_go)
                     print("espace")
             for drone in self.control_drones.all_drone:
                 drone.draw_animation()

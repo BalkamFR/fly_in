@@ -12,22 +12,18 @@ class Drone:
         self.edit_pos(self.hub_select.get_pos())
         self.hub_select.add_drone_hub(self)
         self.animation = []
+        
 
-    def move_drone_hub(self):
-        cord2 = (self.path[1].x, self.path[1].y)
-
-        self.pos_x = cord2[0]
-        self.pos_y = cord2[1]
-
-        self.path[0].remove(self)
-        self.path[1].remove(self)
+    def move_drone_to_end(self, path_to_go):
+        for hub in path_to_go:
+            hub:Hub = hub
+            self.move_to_hub(hub)
     def move_to_hub(self, hub_select_param: Hub):
         self.hub_select.remove_drone_hub(self)
         self.hub_select = hub_select_param
         self.hub_select.add_drone_hub(self)
 
         self.calc_animation(hub_select_param)
-        print(f"move {self.name_drone} to hub {self.hub_select.name}")
 
     def calc_animation(self, hub_select_param: Hub):
         step = 5
@@ -79,4 +75,5 @@ class ControlDrone:
         for i in range(self.nb_drone):
             drone:Drone = Drone(f"drone_{i}",self.parsing.start_hub)
             # print(drone.name_drone)
+            drone.path = self.parsing.path_to_exit
             self.all_drone.append(drone)

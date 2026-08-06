@@ -78,7 +78,6 @@ def open_files(path_file:str) -> str:
         files += nom_du_fichier
         files += "\n" 
         files += f.read()
-        print(files)
         return files
 
 
@@ -100,7 +99,7 @@ class Hub:
         self.max_drones: int | None = max_drones
         self.zone: str = zone
 
-        self.neighbors: list[dict] = []
+        self.neighbors:Hub = None
         self.current_drones: list = []
 
 
@@ -108,12 +107,10 @@ class Hub:
         return (self.x, self.y)
 
     def remove_drone_hub(self, drone):
-        print(self.current_drones)
         self.current_drones.remove(drone)
 
     def add_drone_hub(self, drone):
         self.current_drones.append(drone)
-        print(drone)
 
     def __repr__(self) -> str:
             return (
@@ -159,24 +156,34 @@ def hub_good_format(line: str) -> Hub:
     
     return hub
 
-
 class ParsingFiles:
     def __init__(self, file_split:str):
         self.file_split = file_split
         self.nb_drone = 0
-        self.start_hub = {}
-        self.end_hub = {}
+        self.start_hub:Hub = None
+        self.end_hub:Hub = None
         self.hub = []
-        self.all_name_hub = []
+        self.all_name_hub:list[Hub] = []
         self.name_file = file_split[0]
         self.connection = {}
         self.nb_drone_check()
         self.hub_check()
         self.create_connection()
+        self.create_neightbord()
+        from algo.astar import a_star
+        self.path_to_exit = a_star(self.start_hub, self.end_hub)
         self.control_drone = ControlDrone(self)
+        print(f"Files select :{self.name_file}")
 
 
-
+    def create_neightbord(self):
+        i = 0
+        self.start_hub.neighbors = self.hub[0]
+        while i < len(self.hub) - 1:
+            hub:Hub = self.hub[i]
+            hub.neighbors = self.hub[i + 1]
+            i+=1
+        self.end_hub.neighbors = self.end_hub
     def nb_drone_check(self):
         for line in self.file_split:
             if "nb_drone" in line:
