@@ -117,17 +117,19 @@ def a_star(start: Hub, end: Hub, reservations: dict, connections: dict, true_dis
 
     return []
 
-
+from drone import Drone
 def start_astar_drones(scren):
 
     reservations = {}
     schedule = {}
 
     all_hubs = [scren.setting_maps.start_hub, scren.setting_maps.end_hub] + scren.setting_maps.hub
+    print(f"Path of file : {scren.path}/{scren.setting_maps.name_file}\n")
     true_distances = reverse_dijkstra(scren.setting_maps.end_hub, all_hubs)
+    all_turn = []
 
-    print(scren.control_drones.all_drone)
-    for drone in scren.control_drones.all_drone:
+    for drone_ in scren.control_drones.all_drone:
+        drone:Drone = drone_
         path = a_star(
             scren.setting_maps.start_hub,
             scren.setting_maps.end_hub,
@@ -158,11 +160,19 @@ def start_astar_drones(scren):
             if curr_hub.name != scren.setting_maps.end_hub.name:
                 reservations[(curr_hub.name, curr_turn)] = reservations.get((curr_hub.name, curr_turn), 0) + 1
 
-        drone.move_drone_to_end([p[0] for p in path])
+        path_find = [p[0] for p in path]
+        drone.move_drone_to_end(path_find)
 
+    all_turn_live = []
+    all_d = []
     if schedule:
         max_turn = max(schedule.keys())
         for t in range(1, max_turn + 1):
             if t in schedule:
+                all_turn_live.append(" ".join(schedule[t]))
                 print(" ".join(schedule[t]))
-
+        print()
+        for d in all_turn_live:
+            tmp = d.split(" ")
+            for t in tmp:
+                all_d.append(t.split("-")[1])

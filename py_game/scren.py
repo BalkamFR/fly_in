@@ -13,6 +13,8 @@ class Screen:
         self.setting_maps = setting_maps
         self.control_drones = setting_maps.control_drone if setting_maps else None
         self.zoom = 2
+        self.path_select = "easy"
+        self.path = Path(f"maps/{self.path_select}")
         self.width = 1920 
         self.height = 1080 
         self.change_background("background.png")
@@ -20,9 +22,7 @@ class Screen:
         self.window = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption(self.name_program)
         self.first_color = (200, 210, 225)
-        self.path_select = "easy"
-        path = Path(f"maps/{self.path_select}")
-        self.files_select = sorted([f.name for f in path.iterdir() if f.is_file()])
+        self.files_select = sorted([f.name for f in self.path.iterdir() if f.is_file()])
         self.virtual_surface = pygame.Surface((self.width, self.height))
         self.error_message = ""
 
@@ -38,6 +38,7 @@ class Screen:
         page = "start_page"
         animation = 0
         space = 0
+        auto_start = self.setting_maps is not None
         while running:
             clock.tick(60)
             animation += 1
@@ -88,6 +89,11 @@ class Screen:
             if page == "start_page":
                 space = 0
                 self.drawing_start_page()
+            if auto_start and self.setting_maps:
+                auto_start = False
+                page = "hub_page"
+                start_astar_drones(self)
+                space = 1
             if page == "hub_page":
                 self.create_drone()
                 self.drawing_hub_page()

@@ -6,6 +6,7 @@ def split_check_format(hub: str, separateur: str) -> list:
     new_tab = []
     temp = ""
     dans_crochets = False
+    hub = hub.strip()
     for char in hub:
         if char == "[":
             dans_crochets = True
@@ -36,8 +37,6 @@ def check_format_hub(hub: str):
         raise TypeError(f"[Error] Hub Y coordinate must be an integer, got '{hub_split[3]}'")
     if not hub_split[4].startswith("[") or not hub_split[4].endswith("]"):
         raise TypeError(f"[Error] Hub options must be enclosed in brackets [], got: '{hub_split[4]}'")
-    if not "color" in hub_split[4] and not "[]" in hub_split[4]:
-        return
     if not "=" in hub_split[4]:
         raise TypeError(f"[Error] Hub options require '=' assignments (e.g. [color=red]), got: '{hub_split[4]}'")
         
@@ -74,10 +73,13 @@ def check_double(files:str, check_double1:str, check_double2:str):
 def open_files(path_file:str) -> str:
     files = ""
     with open(path_file) as f:
-        nom_du_fichier = f.name.split("/")[-1]
-        files += nom_du_fichier
+        files_read = str(f.read())
+        if len(files_read) == 0:
+            raise ValueError(f"[Error] This file ({path_file}) is empty")
+        name_file = f.name.split("/")[-1]
+        files += name_file
         files += "\n" 
-        files += f.read()
+        files += files_read
         return files
 
 class ParsingFiles:
@@ -123,7 +125,7 @@ class ParsingFiles:
                 try:
                     if line_split[1]:
                         self.nb_drone = int(line_split[1])
-                except:
+                except ValueError:
                     raise ValueError(f"[Error] 'nb_drone' value must be a positive integer, got: '{line_split[1].strip()}'")
                 if  int(line_split[1]) < 0:
                     raise ValueError(f"[Error] 'nb_drone' value must be strictly positive, got: {line_split[1]}")
@@ -171,7 +173,13 @@ class ParsingFiles:
                         max_lint = int(content.split("max_link_capacity=")[1].split()[0].strip("]"))
                         if max_lint < 1:
                             raise ValueError(f"[Error] max_link_capacity must be ≥ 1, got: {max_lint}")
-                        
+                        if "[" in content:
+                            bracket_content = content.split("[")[1].split("]")[0]
+                            for item in bracket_content.split():
+                                if "=" in item:
+                                    key = item.split("=")[0]
+                                    if key != "max_link_capacity":
+                                        raise ValueError(f"[Error] Unknown connection option '{key}' — only 'max_link_capacity' is allowed")  
                     else:
                         max_lint = 1
                     self.connection.update({i:{max_lint:content.split("-")}})
@@ -190,6 +198,19 @@ class ParsingFiles:
             if "hub:" in line and "end_hub" not in line and "start_hub" not in line:
                 self.hub.append(hub_good_format(line)) 
                 i+=1
+        all_names = [self.start_hub.name, self.end_hub.name] + [h.name for h in self.hub]
+        seen = set()
+        for name in all_names:
+            if name in seen:
+                raise ValueError(f"[Error] Duplicate hub name '{name}' — each hub must have a unique name")
+            seen.add(name)
+        all_hubs_list = [self.start_hub, self.end_hub] + self.hub
+        seen_coords = set()
+        for h in all_hubs_list:
+            coord = (h.x, h.y)
+            if coord in seen_coords:
+                raise ValueError(f"[Error] Duplicate coordinates ({h.x}, {h.y}) for hub '{h.name}' — each hub must have unique coordinates")
+            seen_coords.add(coord)
 
 from drone import ControlDrone
 
@@ -213,8 +234,11 @@ def hub_good_format(line: str) -> Hub:
         main_part = content
         options_str = ""
 
+    RESERVED_NAMES = {"hub", "start_hub", "end_hub", "connection", "nb_drones", "nb_drone"}
     tokens = main_part.split()
     name = tokens[0]
+    if name in RESERVED_NAMES:
+        raise ValueError(f"[Error] Hub name '{name}' is a reserved keyword — choose a different name")
     x = int(tokens[1])
     y = int(tokens[2])
     color = "black"
@@ -227,7 +251,12 @@ def hub_good_format(line: str) -> Hub:
                 if key == "color":
                     color = value
                 elif key == "max_drones":
-                    max_drones = int(value)
+                    try:
+                        max_drones = int(value)
+                    except ValueError:
+                        raise ValueError(f"[Error] 'max_drones' value must be an integer, got: '{value}'")
+                    if max_drones <= 0:
+                        raise ValueError(f"[Error] 'max_drones' value must be strictly positive, got: {max_drones}")
                 elif key == "zone":
                     zone = value
     hub = Hub(

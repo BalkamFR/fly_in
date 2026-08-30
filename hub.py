@@ -24,13 +24,13 @@ class Hub:
         return (self.x, self.y)
 
     def remove_drone_hub(self, drone):
-        self.current_drones.remove(drone)
+        if drone in self.current_drones:
+            self.current_drones.remove(drone)
 
     def add_drone_hub(self, drone):
-        self.current_drones.append(drone)
-
+        if drone not in self.current_drones:
+            self.current_drones.append(drone)
     def __repr__(self) -> str:
             return (
-                f"Hub(name='{self.name}', pos=({self.x}, {self.y}), "
-                f"zone='{self.zone}', max_drones={self.max_drones}, color='{self.color}')"
+                f"Hub(name='{self.name}', pos=({self.x}, {self.y}) "
             )
