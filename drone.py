@@ -1,5 +1,4 @@
 from parsing import Hub,ParsingFiles
-import pygame
 
 class Drone:
     def __init__(self, name, hub_start:Hub):

@@ -1,19 +1,17 @@
 import pygame
 from parsing import pars_file, ParsingFiles, Hub
 from pathlib import Path
-from drone import Drone
 from algo.astar import start_astar_drones
 
 
 def drawing_function_menu(window, x, y, width, height):
     pygame.draw.rect(window, (0, 0, 255), [x, y, width, height])
 
-
 class Screen:
-    def __init__(self, setting_maps:ParsingFiles):
+    def __init__(self, setting_maps: ParsingFiles | None = None):
         pygame.init()
         self.setting_maps = setting_maps
-        self.control_drones = setting_maps.control_drone
+        self.control_drones = setting_maps.control_drone if setting_maps else None
         self.zoom = 2
         self.width = 1920 
         self.height = 1080 
@@ -26,6 +24,8 @@ class Screen:
         path = Path(f"maps/{self.path_select}")
         self.files_select = sorted([f.name for f in path.iterdir() if f.is_file()])
         self.virtual_surface = pygame.Surface((self.width, self.height))
+        self.error_message = ""
+
 
     def create_drone(self):
         self.control_drones = self.setting_maps.control_drone
@@ -33,12 +33,11 @@ class Screen:
         bg_image = pygame.image.load(f"img/{path}")
         self.background = pygame.transform.smoothscale(bg_image, (self.width, self.height))
     def display(self):
-        move_drone = 0
         clock = pygame.time.Clock()
         running = True
         page = "start_page"
         animation = 0
-        espace = 0
+        space = 0
         while running:
             clock.tick(60)
             animation += 1
@@ -53,7 +52,11 @@ class Screen:
                         if hasattr(self, "map_buttons") and page == "start_page":
                                 for file_name, rect in self.map_buttons:
                                     if rect.collidepoint(event.pos):
-                                        self.setting_maps = pars_file(f"maps/{self.path_select}/{file_name}")
+                                        try:
+                                            self.setting_maps = pars_file(f"maps/{self.path_select}/{file_name}")
+                                            self.error_message = ""
+                                        except Exception as e:
+                                            self.error_message = str(e)
                         if self.btn_easy.collidepoint(event.pos) and page == "start_page":
                             self.path_select = "easy"
                             path = Path(f"maps/{self.path_select}")
@@ -71,16 +74,17 @@ class Screen:
                             path = Path(f"maps/{self.path_select}")
                             self.files_select = sorted([f.name for f in path.iterdir() if f.is_file()])
                         if self.btn_start.collidepoint(event.pos) and page == "start_page":
-                            page = "hub_page"
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and espace == 0:
-                    espace = 1
+                            if self.setting_maps:
+                                page = "hub_page"
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and space == 0:
+                    space = 1
                     start_astar_drones(self)
-                    print("espace")
-            for drone in self.control_drones.all_drone:
-                drone.draw_animation()
+            if self.control_drones:
+                for drone in self.control_drones.all_drone:
+                    drone.draw_animation()
             self.window.blit(self.background, (0, 0))
             if page == "start_page":
-                espace = 0
+                space = 0
                 self.drawing_start_page()
             if page == "hub_page":
                 self.create_drone()
@@ -167,7 +171,7 @@ class Screen:
     def drawing_start_page(self):
         self.change_background("background.png")
         self.detail_card = pygame.Rect((self.width - 400) , (self.height - 820) , 380 , 60 )
-        self.right_panel_rect = pygame.Rect(self.width - 400 , (self.height - 820) , 380 , 400 )
+        self.right_panel_rect = pygame.Rect(self.width - 400 , (self.height - 835) , 380 , 280)
 
         self.btn_start = pygame.Rect(0, 0, 380  , 80 )
         self.btn_start.centerx =( self.width // 2) 
@@ -177,37 +181,64 @@ class Screen:
         self.btn_quit = pygame.Rect((self.width - 200)  , (self.height - 100) , 180 , 50 )
         self.text_center_box(self.btn_quit, "Quit", 20, (255, 255, 255), "consolas")
 
-        self.text_center_box(self.detail_card, "Details carte", 32 , (255, 255, 255), "consolas")
-
 
         self.left_panel_rect = pygame.Rect(15, self.height - 820, 480, 800)
 
         self.all_transparent([self.left_panel_rect, self.right_panel_rect ,self.btn_start , self.btn_quit])
 
-        self.name_maps = pygame.Rect(self.width - 400 , self.height - 770, 110, 70)
-        self.text_left_box(self.name_maps, "Name: ", 25, (255, 255, 255), "consolas")
-        self.nb_drone_maps = pygame.Rect(self.width - 400 , self.height - 730, 110, 70)
-        self.text_left_box(self.nb_drone_maps, "Drones: ", 25, (255, 255, 255), "consolas")
-        self.hub_maps = pygame.Rect(self.width - 400 , self.height - 690, 110, 70)
-        self.text_left_box(self.hub_maps, "Hubs: ", 25, (255, 255, 255), "consolas")
-        self.mode_maps = pygame.Rect(self.width - 400 , self.height - 650, 110, 70)
-        self.text_left_box(self.mode_maps, "Mode: ", 25, (255, 255, 255), "consolas")
+        if len(self.error_message) == 0:
+            self.text_center_box(self.detail_card, "Details carte", 26, (0, 230, 255), "consolas")
+            self.name_maps = pygame.Rect(self.width - 400 , self.height - 770, 110, 70)
+            self.text_left_box(self.name_maps, "Name: ", 18, (255, 255, 255), "consolas")
+            self.nb_drone_maps = pygame.Rect(self.width - 400 , self.height - 730, 110, 70)
+            self.text_left_box(self.nb_drone_maps, "Drones: ", 18, (255, 255, 255), "consolas")
+            self.hub_maps = pygame.Rect(self.width - 400 , self.height - 690, 110, 70)
+            self.text_left_box(self.hub_maps, "Hubs: ", 18, (255, 255, 255), "consolas")
+            self.mode_maps = pygame.Rect(self.width - 400 , self.height - 650, 110, 70)
+            self.text_left_box(self.mode_maps, "Mode: ", 18, (255, 255, 255), "consolas")
+            self.name_maps_text = pygame.Rect(self.width - 240 , self.height - 770, 110, 70)
+            self.hub_maps_text = pygame.Rect(self.width - 240 , self.height - 690, 110, 70)
+            self.nb_drone_maps_text = pygame.Rect(self.width - 240 , self.height - 730, 110, 70)
+            self.mode_maps_text = pygame.Rect(self.width - 240 , self.height - 650, 110, 70)
+            map_name = self.setting_maps.name_file.split(".")[0] if self.setting_maps else ""
+            nb_drones = str(self.setting_maps.nb_drone) if self.setting_maps else ""
+            nb_hubs = str(len(self.setting_maps.all_name_hub)) if self.setting_maps else ""
+            mode = self.path_select if self.setting_maps else ""
+            self.text_left_box(self.name_maps_text, map_name, 15, (255, 255, 255), "consolas")
+            self.text_left_box(self.nb_drone_maps_text, nb_drones, 20, (255, 255, 255), "consolas")
+            self.text_left_box(self.hub_maps_text, nb_hubs, 20, (255, 255, 255), "consolas")
+            self.text_left_box(self.mode_maps_text, mode, 20, (255, 255, 255), "consolas")
+        else:
+            self.text_center_box(self.detail_card, "Erreur parsing", 26, (255, 75, 75), "consolas")
+            clean_msg = self.error_message
+            if clean_msg.lower().startswith("[error]"):
+                clean_msg = clean_msg[7:].lstrip(": ").strip()
+            font = pygame.font.SysFont("consolas", 16)
+            max_width = self.right_panel_rect.width - 30
+            words = clean_msg.split()
+            lines = []
+            current_line = ""
 
-
-        self.name_maps_text = pygame.Rect(self.width - 240 , self.height - 770, 110, 70)
-        self.text_left_box(self.name_maps_text, f"{self.setting_maps.name_file.split(".")[0]}", 15, (255, 255, 255), "consolas")
-        self.nb_drone_maps_text = pygame.Rect(self.width - 240 , self.height - 730, 110, 70)
-        self.text_left_box(self.nb_drone_maps_text, f"{self.setting_maps.nb_drone}", 20, (255, 255, 255), "consolas")
-        self.hub_maps_text = pygame.Rect(self.width - 240 , self.height - 690, 110, 70)
-        self.text_left_box(self.hub_maps_text, f"{len(self.setting_maps.all_name_hub)}", 20, (255, 255, 255), "consolas")
-        self.mode_maps_text = pygame.Rect(self.width - 240 , self.height - 650, 110, 70)
-        self.text_left_box(self.mode_maps_text, self.path_select, 20, (255, 255, 255), "consolas")
-
+            for word in words:
+                test_line = f"{current_line} {word}".strip()
+                if font.size(test_line)[0] <= max_width:
+                    current_line = test_line
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = word
+            if current_line:
+                lines.append(current_line)
+            start_x = self.right_panel_rect.x + 15
+            start_y = self.right_panel_rect.y + 80
+            for i, line in enumerate(lines):
+                text_surf = font.render(line, True, (255, 200, 200))
+                self.window.blit(text_surf, (start_x, start_y + (i * 24)))
         self.select_maps(15, self.height - 745, self.files_select)
 
         size_btn = 105
         marge = 30 
-        gap = 12          
+        gap = 12 
         
         self.btn_easy = pygame.Rect(marge + (0 * (size_btn + gap)), self.height - 800, size_btn, 50)
         self.btn_medium = pygame.Rect(marge + (1 * (size_btn + gap)), self.height - 800, size_btn, 50)
