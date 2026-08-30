@@ -2,11 +2,12 @@ import pygame
 from parsing import pars_file, ParsingFiles, Hub
 from pathlib import Path
 from drone import Drone
-
+from algo.astar import start_astar_drones
 
 
 def drawing_function_menu(window, x, y, width, height):
     pygame.draw.rect(window, (0, 0, 255), [x, y, width, height])
+
 
 class Screen:
     def __init__(self, setting_maps:ParsingFiles):
@@ -26,7 +27,8 @@ class Screen:
         self.files_select = sorted([f.name for f in path.iterdir() if f.is_file()])
         self.virtual_surface = pygame.Surface((self.width, self.height))
 
-
+    def create_drone(self):
+        self.control_drones = self.setting_maps.control_drone
     def change_background(self, path):
         bg_image = pygame.image.load(f"img/{path}")
         self.background = pygame.transform.smoothscale(bg_image, (self.width, self.height))
@@ -36,6 +38,7 @@ class Screen:
         running = True
         page = "start_page"
         animation = 0
+        espace = 0
         while running:
             clock.tick(60)
             animation += 1
@@ -63,25 +66,28 @@ class Screen:
                             self.path_select = "hard"
                             path = Path(f"maps/{self.path_select}")
                             self.files_select = sorted([f.name for f in path.iterdir() if f.is_file()])
+                        if self.btn_challenger.collidepoint(event.pos) and page == "start_page":
+                            self.path_select = "challenger"
+                            path = Path(f"maps/{self.path_select}")
+                            self.files_select = sorted([f.name for f in path.iterdir() if f.is_file()])
                         if self.btn_start.collidepoint(event.pos) and page == "start_page":
                             page = "hub_page"
-                        if self.menu_home.collidepoint(event.pos):
-                            page = "start_page"
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                    drone = None
-                    drone_0:Drone = self.control_drones.all_drone[0]
-                    from algo.astar import a_star
-                    path_to_go = a_star(self.setting_maps.start_hub, self.setting_maps.end_hub)
-                    drone_0.move_drone_to_end(path_to_go)
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and espace == 0:
+                    espace = 1
+                    start_astar_drones(self)
                     print("espace")
             for drone in self.control_drones.all_drone:
                 drone.draw_animation()
             self.window.blit(self.background, (0, 0))
             if page == "start_page":
+                espace = 0
                 self.drawing_start_page()
             if page == "hub_page":
-                # self.window.fill((255, 0, 0))
+                self.create_drone()
                 self.drawing_hub_page()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.btn_home.collidepoint(event.pos):
+                        page = "start_page"
             pygame.display.update()
         pygame.quit()
 
@@ -128,29 +134,8 @@ class Screen:
             )
             i+=1
 
-    def menu(self):
-        menu_rect = pygame.Rect(0, 160  , self.width  , 80  )
-        menu_surface = pygame.Surface(menu_rect.size, pygame.SRCALPHA)
-        menu_surface.fill((25, 8, 36, 100))
-        self.window.blit(menu_surface, menu_rect)
-
-        self.menu_home = pygame.Rect((int(self.width * 0.35) - 75), 175 , 150 , 50 )
-        self.text_center_box(
-            self.menu_home, "Home", 25 , self.first_color, "consolas"
-        )
-
-        self.menu_maps = pygame.Rect((int(self.width * 0.50) - 75), 175, 150, 50)
-        self.text_center_box(
-            self.menu_maps, "Maps", 25 , self.first_color, "consolas"
-        )
-
-        self.menu_settings = pygame.Rect((int(self.width * 0.65) - 75) , 175 , 150 , 50 )
-        self.text_center_box(
-            self.menu_settings, "Settings", 25 , self.first_color, "consolas"
-        )
-
     def header(self):
-        header_rect = pygame.Rect(0, 0, self.width , 160 )
+        header_rect = pygame.Rect(0, 0, self.width , 220)
         menu_surface = pygame.Surface(header_rect.size, pygame.SRCALPHA)
         menu_surface.fill((25, 8, 36, 100))
         self.window.blit(menu_surface, header_rect)
@@ -193,12 +178,11 @@ class Screen:
         self.text_center_box(self.btn_quit, "Quit", 20, (255, 255, 255), "consolas")
 
         self.text_center_box(self.detail_card, "Details carte", 32 , (255, 255, 255), "consolas")
-        self.btn_help = pygame.Rect((self.width - 400)  , (self.height - 100) , 180 , 50 )
-        self.text_center_box(self.btn_help, "Help", 20 , (255, 255, 255), "consolas")
+
 
         self.left_panel_rect = pygame.Rect(15, self.height - 820, 480, 800)
 
-        self.all_transparent([self.left_panel_rect, self.right_panel_rect,self.btn_help ,self.btn_start , self.btn_quit])
+        self.all_transparent([self.left_panel_rect, self.right_panel_rect ,self.btn_start , self.btn_quit])
 
         self.name_maps = pygame.Rect(self.width - 400 , self.height - 770, 110, 70)
         self.text_left_box(self.name_maps, "Name: ", 25, (255, 255, 255), "consolas")
@@ -211,28 +195,33 @@ class Screen:
 
 
         self.name_maps_text = pygame.Rect(self.width - 240 , self.height - 770, 110, 70)
-        self.text_left_box(self.name_maps_text, f"{self.setting_maps.name_file}", 15, (255, 255, 255), "consolas")
+        self.text_left_box(self.name_maps_text, f"{self.setting_maps.name_file.split(".")[0]}", 15, (255, 255, 255), "consolas")
         self.nb_drone_maps_text = pygame.Rect(self.width - 240 , self.height - 730, 110, 70)
         self.text_left_box(self.nb_drone_maps_text, f"{self.setting_maps.nb_drone}", 20, (255, 255, 255), "consolas")
         self.hub_maps_text = pygame.Rect(self.width - 240 , self.height - 690, 110, 70)
         self.text_left_box(self.hub_maps_text, f"{len(self.setting_maps.all_name_hub)}", 20, (255, 255, 255), "consolas")
         self.mode_maps_text = pygame.Rect(self.width - 240 , self.height - 650, 110, 70)
-        self.text_left_box(self.mode_maps_text, "Mode: ", 20, (255, 255, 255), "consolas")
+        self.text_left_box(self.mode_maps_text, self.path_select, 20, (255, 255, 255), "consolas")
 
         self.select_maps(15, self.height - 745, self.files_select)
 
-        self.btn_easy = pygame.Rect(30, self.height - 800, 120, 50)
-        self.btn_medium = pygame.Rect(190, self.height - 800, 120, 50)
-        self.btn_hard = pygame.Rect(360, self.height - 800, 120, 50)
+        size_btn = 105
+        marge = 30 
+        gap = 12          
+        
+        self.btn_easy = pygame.Rect(marge + (0 * (size_btn + gap)), self.height - 800, size_btn, 50)
+        self.btn_medium = pygame.Rect(marge + (1 * (size_btn + gap)), self.height - 800, size_btn, 50)
+        self.btn_hard = pygame.Rect(marge + (2 * (size_btn + gap)), self.height - 800, size_btn, 50)
+        self.btn_challenger = pygame.Rect(marge + (3 * (size_btn + gap)), self.height - 800, size_btn, 50)
 
-        self.all_transparent([self.btn_easy, self.btn_medium, self.btn_hard], flag=True)
+        self.all_transparent([self.btn_easy, self.btn_medium, self.btn_hard, self.btn_challenger], flag=True)
 
-        self.text_center_box(self.btn_easy, "Easy", 22, (21, 237, 47), "consolas")
-        self.text_center_box(self.btn_medium, "Medium", 22, (21, 79, 237), "consolas")
-        self.text_center_box(self.btn_hard, "Hard", 22, (255, 0, 0), "consolas")
+        self.text_center_box(self.btn_easy, "Easy", 15, (21, 237, 47), "consolas")
+        self.text_center_box(self.btn_medium, "Medium", 15, (21, 79, 237), "consolas")
+        self.text_center_box(self.btn_hard, "Hard", 15, (255, 0, 0), "consolas")
+        self.text_center_box(self.btn_challenger, "Challenger", 15, (255, 215, 0), "consolas")
 
         self.header()
-        self.menu()
 
 
     def draw_connections(self, size: int = 100) -> None:
@@ -242,12 +231,17 @@ class Screen:
             size = 125
         if self.path_select == "hard":
             size = 100
+        if self.path_select == "challenger":
+            size = 70
+
         if self.path_select == "easy":
             color_select = 21, 237, 47
         if self.path_select == "medium":
             color_select = 21, 79, 237
         if self.path_select == "hard":
             color_select = 255, 0, 0
+        if self.path_select == "challenger":
+            color_select = 255, 215, 0
         all_hubs = [
             self.setting_maps.start_hub,
             self.setting_maps.end_hub,
@@ -288,9 +282,10 @@ class Screen:
             return (px, py)
 
         for conn in self.setting_maps.connection.values():
-            if len(conn) >= 2:
-                n1 = conn[0].strip()
-                n2 = conn[1].split()[0].strip()
+            nodes = list(conn.values())[0]
+            if len(nodes) >= 2:
+                n1 = nodes[0].strip()
+                n2 = nodes[1].split()[0].strip()
 
                 if n1 in hubs_by_name and n2 in hubs_by_name:
                     pos1 = to_pixels(hubs_by_name[n1])
@@ -298,15 +293,7 @@ class Screen:
                     pygame.draw.line(
                         self.window, (color_select), pos1, pos2, width=3
                     )
-    def draw_drones(self,hub:Hub ,x, y) -> None:
-        for drone in hub.current_drones:
-            try:
-                drone_img = pygame.image.load(drone.img_drone)
-                drone_img = pygame.transform.scale(drone_img, (40, 40))
-                rect = drone_img.get_rect(center=(x, y))
-                self.window.blit(drone_img, rect)
-            except (pygame.error, FileNotFoundError):
-                pygame.window.circle(self.screen, (255, 0, 0), (drone.pos_x, drone.pos_y), 15)
+
 
 
     def create_hub(self, hub: Hub, size: int = 100) -> None:
@@ -316,6 +303,8 @@ class Screen:
             size = 125
         if self.path_select == "hard":
             size = 100
+        if self.path_select == "challenger":
+            size = 70
         color_map: dict[str, tuple[int, int, int]] = {
             "red": (220, 53, 69),
             "blue": (13, 110, 253),
@@ -330,6 +319,11 @@ class Screen:
             "lime": (50, 205, 50),
             "magenta": (255, 0, 255),
             "gold": (255, 215, 0),
+            "maroon": (128, 0, 0),
+            "darkred": (139, 0, 0),
+            "violet": (238, 130, 238),
+            "crimson": (220, 20, 60),
+            "rainbow": (255, 105, 180),
         }
 
         all_hubs = [
@@ -373,6 +367,8 @@ class Screen:
         size_name_hub = 16
         if len(hub.name) > 10:
             size_name_hub = 10
+        if self.path_select == "challenger":
+            size_name_hub = 8
         self.text_center_box(
             hub_rect, hub.name, size_name_hub, (255, 255, 255), "consolas"
         )
@@ -386,6 +382,8 @@ class Screen:
             size = 125
         elif self.path_select == "hard":
             size = 100
+        elif self.path_select == "challenger":
+            size = 70
 
         all_hubs = [
             self.setting_maps.start_hub,
@@ -414,7 +412,7 @@ class Screen:
 
             try:
                 drone_img = pygame.image.load(drone.img_drone)
-                drone_img = pygame.transform.scale(drone_img, (80, 80))
+                drone_img = pygame.transform.scale(drone_img, (size - 20, size - 20))
                 rect = drone_img.get_rect(center=(cx, cy))
                 self.window.blit(drone_img, rect)
             except (pygame.error, FileNotFoundError):
@@ -423,8 +421,46 @@ class Screen:
     def drawing_hub_page(self):
         self.change_background("background_hub.png")
         self.btn_quit = pygame.Rect(self.width - 200, self.height - 100, 180, 50)
-        self.hub_zone = pygame.Rect(20, 270, self.width - 40, 680)
         self.text_center_box(self.btn_quit, "Quit", 20, (255, 255, 255), "consolas")
+
+        self.btn_home = pygame.Rect(self.width - 400, self.height - 100, 180, 50)
+        surf = pygame.display.get_surface()
+
+        temp_surf = pygame.Surface((self.btn_home.width, self.btn_home.height), pygame.SRCALPHA)
+        pygame.draw.rect(temp_surf, (21, 79, 237, 150), (0, 0, self.btn_home.width, self.btn_home.height), border_radius=15)
+        pygame.draw.rect(temp_surf, (255, 255, 255, 220), (0, 0, self.btn_home.width, self.btn_home.height), 2, border_radius=15)
+        
+        surf.blit(temp_surf, self.btn_home.topleft)
+        self.text_center_box(self.btn_home, "Home", 20, (255, 255, 255), "consolas")
+
+        self.hub_zone = pygame.Rect(20, 270, self.width - 40, 680)
+
+        self.infos_map = pygame.Rect(20, 20, 350, 130)
+        self.all_transparent([self.infos_map], flag=True)
+
+        map_name = self.setting_maps.name_file.split(".")[0]
+        nb_drones = self.setting_maps.nb_drone
+        nb_hubs = len(self.setting_maps.all_name_hub)
+        nb_links = len(getattr(self.setting_maps, "connection", {}))
+
+        lines = [
+            f"Map : {map_name}",
+            f"Drones : {nb_drones}",
+            f"Hubs : {nb_hubs}",
+            f"Liens : {nb_links}"
+        ]
+
+        font = pygame.font.SysFont("consolas", 16)
+        start_x = self.infos_map.x + 15
+        start_y = self.infos_map.y + 15
+        line_spacing = 25
+
+        current_surface = pygame.display.get_surface()
+        if current_surface:
+            for i, text in enumerate(lines):
+                text_surface = font.render(text, True, (255, 255, 255))
+                current_surface.blit(text_surface, (start_x, start_y + (i * line_spacing)))
+
         self.all_transparent([self.btn_quit])
         self.all_transparent([self.hub_zone], flag=True)
         self.draw_connections()
@@ -434,4 +470,4 @@ class Screen:
             self.create_hub(h)
         self.draw_all_drones()
         self.header()
-        self.menu()
+

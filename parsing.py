@@ -1,6 +1,6 @@
+from hub import Hub
 
-
-color_good = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'black', 'white', 'cyan', 'brown', 'lime', 'magenta', 'gold']
+color_good = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'black', 'white', 'cyan', 'brown', 'lime', 'magenta', 'gold', 'maroon', 'darkred', 'violet', 'crimson', 'rainbow']
 
 def split_check_format(hub: str, separateur: str) -> list:
     new_tab = []
@@ -80,43 +80,129 @@ def open_files(path_file:str) -> str:
         files += f.read()
         return files
 
+class ParsingFiles:
+    def __init__(self, file_split:str):
+        self.file_split = file_split
+        self.nb_drone = 0
+        self.start_hub:Hub = None
+        self.end_hub:Hub = None
+        self.hub = []
+        self.all_name_hub:list[Hub] = []
+        self.name_file = file_split[0]
+        self.connection = {}
+        self.nb_drone_check()
+        self.hub_check()
+        self.create_connection()
 
-class Hub:
-    def __init__(
-        self,
-        name: str,
-        x: int,
-        y: int,
-        color: str = "black",
-        max_drones: int | None = None,
-        zone: str = "normal"
-    ):
-        self.name: str = name
-        self.x: int = x
-        self.y: int = y
+        self.create_neightbord()
+        self.path_to_exit = []
+        self.control_drone = ControlDrone(self)
 
-        self.color: str = color
-        self.max_drones: int | None = max_drones
-        self.zone: str = zone
+    def create_neightbord(self):
+        all_hubs = {h.name: h for h in self.hub}
+        all_hubs[self.start_hub.name] = self.start_hub
+        all_hubs[self.end_hub.name] = self.end_hub
+        for conn in self.connection.values():
+            connection_names = list(conn.values())[0]
+            if len(connection_names) >= 2:
+                name1 = connection_names[0].strip()
+                name2 = connection_names[1].split()[0].strip()
+                if name1 in all_hubs and name2 in all_hubs:
+                    hub1 = all_hubs[name1]
+                    hub2 = all_hubs[name2]
+                    if hub2 not in hub1.neighbors:
+                        hub1.neighbors.append(hub2)
+                    if hub1 not in hub2.neighbors:
+                        hub2.neighbors.append(hub1)
+    def nb_drone_check(self):
+        for line in self.file_split:
+            if "nb_drone" in line:
+                line_split = line.split(":")
+                if len(line_split) != 2:
+                    raise ValueError("[Error] format is not good")
+                try:
+                    if line_split[1]:
+                        self.nb_drone = int(line_split[1])
+                except:
+                    raise ValueError("[Error]: arg nb_drone is not int")
+                if  int(line_split[1]) < 0:
+                    raise ValueError("[Error]: arg nb_drone cant be not is negative value")
+        if self.nb_drone == 0:
+                    raise ValueError("[Error]: arg nb_drone cant be not is negative value")
 
-        self.neighbors:Hub = None
-        self.current_drones: list = []
+
+    def check_connection(self):
+        all_name_connection = []
+        self.all_name_hub.append(self.start_hub.name)
+        self.all_name_hub.append(self.end_hub.name)
+        seen_pairs = set()
+        for hub_name in self.hub:
+            self.all_name_hub.append(hub_name.name)
+        for connection_name_for in self.connection.values():
+            connection_name = list(connection_name_for.values())[0]
+            if len(connection_name) != 2:
+                raise ValueError(f"line: ({connection_name}) is not good")
+            pair = tuple(sorted(connection_name))
+            if pair in seen_pairs:
+                raise ValueError(f"Duplicate connection is forbidden: {connection_name[0]}-{connection_name[1]}")
+            if connection_name[0] == connection_name[1]:
+                raise ValueError(f"auto connection is forbidden: {connection_name[0]}-{connection_name[1]}")
+            seen_pairs.add(pair)
+            all_name_connection.append(connection_name[0])
+            all_name_connection.append(connection_name[1].split()[0])
+        for connection in all_name_connection:
+            if connection not in self.all_name_hub and "max_link_capacity=" not in connection:
+                raise ValueError(f"{connection} is not hub")
+        if self.start_hub.name not in all_name_connection:
+            raise ValueError(f"[Error] The start hub '{self.start_hub.name}' is isolated (has no connections).")
+
+        if self.end_hub.name not in all_name_connection:
+            raise ValueError(f"[Error] The end hub '{self.end_hub.name}' is isolated (has no connections).")
 
 
-    def get_pos(self):
-        return (self.x, self.y)
+    def create_connection(self):
+        i = 0
+        for line in self.file_split:
+            if line.startswith("connection: "):
+                try:
+                    content = line.split("connection:", 1)[1].strip()
+                    max_lint = 0
+                    if "max_link_capacity" in content:
+                        max_lint = int(content.split("max_link_capacity=")[1].split()[0].strip("]"))
+                        if max_lint < 1:
+                            raise ValueError(f"[Error] Invalid max_link_capacity value: {max_lint}. Must be a positive integer.")
+                        
+                    else:
+                        max_lint = 1
+                    self.connection.update({i:{max_lint:content.split("-")}})
+                except Exception:
+                    raise ValueError(f"[Error] Invalid connection syntax on line: '{line}'") 
+                i+=1
+        self.check_connection()
 
-    def remove_drone_hub(self, drone):
-        self.current_drones.remove(drone)
+    def hub_check(self):
+        i = 0
+        for line in self.file_split:
+            if "start_hub:" in line:
+                self.start_hub = hub_good_format(line)
+            if "end_hub:" in line:
+                self.end_hub = hub_good_format(line)
+            if "hub:" in line and "end_hub" not in line and "start_hub" not in line:
+                self.hub.append(hub_good_format(line)) 
+                i+=1
 
-    def add_drone_hub(self, drone):
-        self.current_drones.append(drone)
+from drone import ControlDrone
 
-    def __repr__(self) -> str:
-            return (
-                f"Hub(name='{self.name}', pos=({self.x}, {self.y}), "
-                f"zone='{self.zone}', max_drones={self.max_drones}, color='{self.color}')"
-            )
+def pars_file(name_file:str) -> ParsingFiles:
+    files_str = open_files(name_file)
+    file_split = files_str.split('\n')
+    check_double(file_split, "start_hub","end_hub")
+    for line in file_split:
+        if "hub:" in line:
+            check_format_hub(line)
+    maps = ParsingFiles(file_split)
+    # control_drone = ControlDrone(maps)
+    return maps
 
 
 def hub_good_format(line: str) -> Hub:
@@ -155,114 +241,3 @@ def hub_good_format(line: str) -> Hub:
     )
     
     return hub
-
-class ParsingFiles:
-    def __init__(self, file_split:str):
-        self.file_split = file_split
-        self.nb_drone = 0
-        self.start_hub:Hub = None
-        self.end_hub:Hub = None
-        self.hub = []
-        self.all_name_hub:list[Hub] = []
-        self.name_file = file_split[0]
-        self.connection = {}
-        self.nb_drone_check()
-        self.hub_check()
-        self.create_connection()
-        self.create_neightbord()
-        from algo.astar import a_star
-        self.path_to_exit = a_star(self.start_hub, self.end_hub)
-        self.control_drone = ControlDrone(self)
-        print(f"Files select :{self.name_file}")
-
-
-    def create_neightbord(self):
-        i = 0
-        self.start_hub.neighbors = self.hub[0]
-        while i < len(self.hub) - 1:
-            hub:Hub = self.hub[i]
-            hub.neighbors = self.hub[i + 1]
-            i+=1
-        self.end_hub.neighbors = self.end_hub
-    def nb_drone_check(self):
-        for line in self.file_split:
-            if "nb_drone" in line:
-                line_split = line.split(":")
-                if len(line_split) != 2:
-                    raise ValueError("[Error] format is not good")
-                try:
-                    if line_split[1]:
-                        self.nb_drone = int(line_split[1])
-                except:
-                    raise ValueError("[Error]: arg nb_drone is not int")
-                if  int(line_split[1]) < 0:
-                    raise ValueError("[Error]: arg nb_drone cant be not is negative value")
-        if self.nb_drone == 0:
-                    raise ValueError("[Error]: arg nb_drone cant be not is negative value")
-
-
-    def check_connection(self):
-        all_name_connection = []
-        self.all_name_hub.append(self.start_hub.name)
-        self.all_name_hub.append(self.end_hub.name)
-        seen_pairs = set()
-        for hub_name in self.hub:
-            self.all_name_hub.append(hub_name.name)
-        for connection_name in self.connection.values():
-            if len(connection_name) != 2:
-                raise ValueError(f"line: ({connection_name}) is not good")
-            pair = tuple(sorted(connection_name))
-            if pair in seen_pairs:
-                raise ValueError(f"Duplicate connection is forbidden: {connection_name[0]}-{connection_name[1]}")
-            if connection_name[0] == connection_name[1]:
-                raise ValueError(f"auto connection is forbidden: {connection_name[0]}-{connection_name[1]}")
-            seen_pairs.add(pair)
-            all_name_connection.append(connection_name[0])
-            all_name_connection.append(connection_name[1].split()[0])
-        for connection in all_name_connection:
-            if connection not in self.all_name_hub and "max_link_capacity=" not in connection:
-                raise ValueError(f"{connection} is not hub")
-        if self.start_hub.name not in all_name_connection:
-            raise ValueError(f"[Error] The start hub '{self.start_hub.name}' is isolated (has no connections).")
-
-        if self.end_hub.name not in all_name_connection:
-            raise ValueError(f"[Error] The end hub '{self.end_hub.name}' is isolated (has no connections).")
-
-
-    def create_connection(self):
-        i = 0
-        for line in self.file_split:
-            if line.startswith("connection: "):
-                try:
-                    content = line.split("connection:", 1)[1].strip()
-                    self.connection.update({i:content.split("-")})
-                except Exception:
-                    raise ValueError(f"[Error] Invalid connection syntax on line: '{line}'") 
-                i+=1
-        self.check_connection()
-
-    def hub_check(self):
-        i = 0
-        for line in self.file_split:
-            if "start_hub:" in line:
-                self.start_hub = hub_good_format(line)
-            if "end_hub:" in line:
-                self.end_hub = hub_good_format(line)
-            if "hub:" in line and "end_hub" not in line and "start_hub" not in line:
-                self.hub.append(hub_good_format(line)) 
-                i+=1
-
-from drone import ControlDrone
-
-def pars_file(name_file:str) -> ParsingFiles:
-    files_str = open_files(name_file)
-    file_split = files_str.split('\n')
-    check_double(file_split, "start_hub","end_hub")
-    for line in file_split:
-        if "hub:" in line:
-            check_format_hub(line)
-    maps = ParsingFiles(file_split)
-    # control_drone = ControlDrone(maps)
-
-    return maps
-

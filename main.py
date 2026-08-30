@@ -1,8 +1,5 @@
 from parsing import pars_file
-from drone import ControlDrone
 from py_game.scren import Screen
-import pygame
-from algo.astar import a_star
 
 def main():
     files_parsing = pars_file("maps/hard/01_maze_nightmare.txt")

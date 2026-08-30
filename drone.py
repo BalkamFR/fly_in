@@ -13,21 +13,19 @@ class Drone:
         self.hub_select.add_drone_hub(self)
         self.animation = []
         
-
     def move_drone_to_end(self, path_to_go):
         for hub in path_to_go:
             hub:Hub = hub
             self.move_to_hub(hub)
+
     def move_to_hub(self, hub_select_param: Hub):
         self.hub_select.remove_drone_hub(self)
         self.hub_select = hub_select_param
         self.hub_select.add_drone_hub(self)
-
         self.calc_animation(hub_select_param)
 
     def calc_animation(self, hub_select_param: Hub):
         step = 5
-        
         hub_start_x = self.pos_x
         hub_start_y = self.pos_y
         hub_go_x = hub_select_param.x
@@ -39,14 +37,15 @@ class Drone:
         jump_x = dis_x / step
         jump_y = dis_y / step
         
-        new_tab = []
         for i in range(step):
             hub_start_x += jump_x
             hub_start_y += jump_y
-            new_tab.append((hub_start_x, hub_start_y))
+            self.animation.append((hub_start_x, hub_start_y))
             
-        new_tab.append((hub_go_x, hub_go_y)) 
-        self.animation = new_tab
+        self.animation.append((hub_go_x, hub_go_y))
+
+        self.pos_x = hub_go_x
+        self.pos_y = hub_go_y
 
     def draw_animation(self):
         if len(self.animation) > 0:
@@ -74,6 +73,5 @@ class ControlDrone:
     def create_all_drone(self):
         for i in range(self.nb_drone):
             drone:Drone = Drone(f"drone_{i}",self.parsing.start_hub)
-            # print(drone.name_drone)
             drone.path = self.parsing.path_to_exit
             self.all_drone.append(drone)
