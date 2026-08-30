@@ -5,7 +5,7 @@ from algo.astar import start_astar_drones
 
 
 def drawing_function_menu(window, x, y, width, height):
-    pygame.draw.rect(window, (0, 0, 255), [x, y, width, height])
+    pygame.draw.rect(window, (35, 90, 200), [x, y, width, height])
 
 class Screen:
     def __init__(self, setting_maps: ParsingFiles | None = None):
@@ -19,7 +19,7 @@ class Screen:
         self.name_program = "Fly-in"
         self.window = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption(self.name_program)
-        self.first_color = (186, 186, 186)
+        self.first_color = (200, 210, 225)
         self.path_select = "easy"
         path = Path(f"maps/{self.path_select}")
         self.files_select = sorted([f.name for f in path.iterdir() if f.is_file()])
@@ -56,7 +56,9 @@ class Screen:
                                             self.setting_maps = pars_file(f"maps/{self.path_select}/{file_name}")
                                             self.error_message = ""
                                         except Exception as e:
+                                            print(e)
                                             self.error_message = str(e)
+                                            self.setting_maps = None
                         if self.btn_easy.collidepoint(event.pos) and page == "start_page":
                             self.path_select = "easy"
                             path = Path(f"maps/{self.path_select}")
@@ -113,16 +115,16 @@ class Screen:
     def all_transparent(self, list_box, flag=None):
         radius=15 
         border_width=2
-        color_font = 29, 29, 34, 220
-        border_color = 107, 120, 138
+        color_font = 20, 24, 38, 220
+        border_color = 80, 130, 180
         i = 0
         for box in list_box:
             if i == len(list_box) - 1 and flag is None:
-                color_font = 176, 35, 35, 200
-                border_color = 255, 255, 255 
+                color_font = 160, 40, 55, 200
+                border_color = 220, 80, 100
             if i == len(list_box) - 2 and flag is None:
-                color_font = 35, 176, 98, 200
-                border_color = 255, 255, 255 
+                color_font = 30, 160, 120, 200
+                border_color = 50, 200, 150
             surface = pygame.Surface(box.size, pygame.SRCALPHA)
             pygame.draw.rect(
                 surface, (color_font), surface.get_rect(), border_radius=radius
@@ -141,9 +143,9 @@ class Screen:
     def header(self):
         header_rect = pygame.Rect(0, 0, self.width , 220)
         menu_surface = pygame.Surface(header_rect.size, pygame.SRCALPHA)
-        menu_surface.fill((25, 8, 36, 100))
+        menu_surface.fill((15, 18, 30, 160))
         self.window.blit(menu_surface, header_rect)
-        self.text_center_box(header_rect, "Fly-In", 70 , self.first_color, "lucidaconsole")
+        self.text_center_box(header_rect, "Fly-In", 70 , self.first_color, "consolas")
 
 
     def select_maps(self, start_x, start_y, all_btn):
@@ -161,7 +163,7 @@ class Screen:
                 start_x + padding_left, start_y + i, size_width, size_height
             )
             self.all_transparent([self.box], True)
-            self.text_left_box(self.box, f"{box}", 22 , (255, 255, 255), "consolas")
+            self.text_left_box(self.box, f"{box}", 22 , (225, 230, 240), "consolas")
 
             self.map_buttons.append(
                 (box, self.box)
@@ -176,10 +178,10 @@ class Screen:
         self.btn_start = pygame.Rect(0, 0, 380  , 80 )
         self.btn_start.centerx =( self.width // 2) 
         self.btn_start.bottom = (self.height - 20) 
-        self.text_center_box(self.btn_start, "Start", 30 , (255, 255, 255), "consolas")
+        self.text_center_box(self.btn_start, "Start", 30 , (225, 230, 240), "consolas")
 
         self.btn_quit = pygame.Rect((self.width - 200)  , (self.height - 100) , 180 , 50 )
-        self.text_center_box(self.btn_quit, "Quit", 20, (255, 255, 255), "consolas")
+        self.text_center_box(self.btn_quit, "Quit", 20, (225, 230, 240), "consolas")
 
 
         self.left_panel_rect = pygame.Rect(15, self.height - 820, 480, 800)
@@ -187,15 +189,15 @@ class Screen:
         self.all_transparent([self.left_panel_rect, self.right_panel_rect ,self.btn_start , self.btn_quit])
 
         if len(self.error_message) == 0:
-            self.text_center_box(self.detail_card, "Details carte", 26, (0, 230, 255), "consolas")
+            self.text_center_box(self.detail_card, "Details carte", 26, (100, 200, 255), "consolas")
             self.name_maps = pygame.Rect(self.width - 400 , self.height - 770, 110, 70)
-            self.text_left_box(self.name_maps, "Name: ", 18, (255, 255, 255), "consolas")
+            self.text_left_box(self.name_maps, "Name: ", 18, (225, 230, 240), "consolas")
             self.nb_drone_maps = pygame.Rect(self.width - 400 , self.height - 730, 110, 70)
-            self.text_left_box(self.nb_drone_maps, "Drones: ", 18, (255, 255, 255), "consolas")
+            self.text_left_box(self.nb_drone_maps, "Drones: ", 18, (225, 230, 240), "consolas")
             self.hub_maps = pygame.Rect(self.width - 400 , self.height - 690, 110, 70)
-            self.text_left_box(self.hub_maps, "Hubs: ", 18, (255, 255, 255), "consolas")
+            self.text_left_box(self.hub_maps, "Hubs: ", 18, (225, 230, 240), "consolas")
             self.mode_maps = pygame.Rect(self.width - 400 , self.height - 650, 110, 70)
-            self.text_left_box(self.mode_maps, "Mode: ", 18, (255, 255, 255), "consolas")
+            self.text_left_box(self.mode_maps, "Mode: ", 18, (225, 230, 240), "consolas")
             self.name_maps_text = pygame.Rect(self.width - 240 , self.height - 770, 110, 70)
             self.hub_maps_text = pygame.Rect(self.width - 240 , self.height - 690, 110, 70)
             self.nb_drone_maps_text = pygame.Rect(self.width - 240 , self.height - 730, 110, 70)
@@ -204,12 +206,12 @@ class Screen:
             nb_drones = str(self.setting_maps.nb_drone) if self.setting_maps else ""
             nb_hubs = str(len(self.setting_maps.all_name_hub)) if self.setting_maps else ""
             mode = self.path_select if self.setting_maps else ""
-            self.text_left_box(self.name_maps_text, map_name, 15, (255, 255, 255), "consolas")
-            self.text_left_box(self.nb_drone_maps_text, nb_drones, 20, (255, 255, 255), "consolas")
-            self.text_left_box(self.hub_maps_text, nb_hubs, 20, (255, 255, 255), "consolas")
-            self.text_left_box(self.mode_maps_text, mode, 20, (255, 255, 255), "consolas")
+            self.text_left_box(self.name_maps_text, map_name, 15, (225, 230, 240), "consolas")
+            self.text_left_box(self.nb_drone_maps_text, nb_drones, 20, (225, 230, 240), "consolas")
+            self.text_left_box(self.hub_maps_text, nb_hubs, 20, (225, 230, 240), "consolas")
+            self.text_left_box(self.mode_maps_text, mode, 20, (225, 230, 240), "consolas")
         else:
-            self.text_center_box(self.detail_card, "Erreur parsing", 26, (255, 75, 75), "consolas")
+            self.text_center_box(self.detail_card, "Erreur parsing", 26, (255, 90, 90), "consolas")
             clean_msg = self.error_message
             if clean_msg.lower().startswith("[error]"):
                 clean_msg = clean_msg[7:].lstrip(": ").strip()
@@ -232,7 +234,7 @@ class Screen:
             start_x = self.right_panel_rect.x + 15
             start_y = self.right_panel_rect.y + 80
             for i, line in enumerate(lines):
-                text_surf = font.render(line, True, (255, 200, 200))
+                text_surf = font.render(line, True, (255, 180, 170))
                 self.window.blit(text_surf, (start_x, start_y + (i * 24)))
         self.select_maps(15, self.height - 745, self.files_select)
 
@@ -247,10 +249,10 @@ class Screen:
 
         self.all_transparent([self.btn_easy, self.btn_medium, self.btn_hard, self.btn_challenger], flag=True)
 
-        self.text_center_box(self.btn_easy, "Easy", 15, (21, 237, 47), "consolas")
-        self.text_center_box(self.btn_medium, "Medium", 15, (21, 79, 237), "consolas")
-        self.text_center_box(self.btn_hard, "Hard", 15, (255, 0, 0), "consolas")
-        self.text_center_box(self.btn_challenger, "Challenger", 15, (255, 215, 0), "consolas")
+        self.text_center_box(self.btn_easy, "Easy", 15, (80, 220, 130), "consolas")
+        self.text_center_box(self.btn_medium, "Medium", 15, (70, 140, 255), "consolas")
+        self.text_center_box(self.btn_hard, "Hard", 15, (235, 75, 85), "consolas")
+        self.text_center_box(self.btn_challenger, "Challenger", 15, (255, 195, 50), "consolas")
 
         self.header()
 
@@ -266,13 +268,13 @@ class Screen:
             size = 70
 
         if self.path_select == "easy":
-            color_select = 21, 237, 47
+            color_select = 80, 220, 130
         if self.path_select == "medium":
-            color_select = 21, 79, 237
+            color_select = 70, 140, 255
         if self.path_select == "hard":
-            color_select = 255, 0, 0
+            color_select = 235, 75, 85
         if self.path_select == "challenger":
-            color_select = 255, 215, 0
+            color_select = 255, 195, 50
         all_hubs = [
             self.setting_maps.start_hub,
             self.setting_maps.end_hub,
@@ -337,24 +339,24 @@ class Screen:
         if self.path_select == "challenger":
             size = 70
         color_map: dict[str, tuple[int, int, int]] = {
-            "red": (220, 53, 69),
-            "blue": (13, 110, 253),
-            "green": (25, 135, 84),
-            "yellow": (255, 193, 7),
-            "orange": (253, 126, 20),
-            "purple": (111, 66, 193),
-            "black": (33, 37, 41),
-            "white": (248, 249, 250),
-            "cyan": (13, 202, 240),
-            "brown": (139, 69, 19),
-            "lime": (50, 205, 50),
-            "magenta": (255, 0, 255),
-            "gold": (255, 215, 0),
-            "maroon": (128, 0, 0),
-            "darkred": (139, 0, 0),
-            "violet": (238, 130, 238),
-            "crimson": (220, 20, 60),
-            "rainbow": (255, 105, 180),
+            "red": (200, 60, 70),
+            "blue": (50, 120, 220),
+            "green": (40, 150, 90),
+            "yellow": (230, 190, 50),
+            "orange": (220, 130, 45),
+            "purple": (120, 80, 190),
+            "black": (40, 42, 50),
+            "white": (225, 230, 240),
+            "cyan": (50, 190, 220),
+            "brown": (140, 80, 35),
+            "lime": (90, 195, 80),
+            "magenta": (200, 80, 200),
+            "gold": (220, 190, 50),
+            "maroon": (130, 30, 30),
+            "darkred": (150, 30, 30),
+            "violet": (180, 120, 210),
+            "crimson": (200, 50, 65),
+            "rainbow": (220, 120, 170),
         }
 
         all_hubs = [
@@ -391,7 +393,7 @@ class Screen:
 
         pygame.draw.circle(self.window, color_rgb, (cx, cy), radius)
         pygame.draw.circle(
-            self.window, (255, 255, 255), (cx, cy), radius, width=2
+            self.window, (180, 200, 230), (cx, cy), radius, width=2
         )
 
         hub_rect = pygame.Rect(cx - radius, cy - radius, size, size)
@@ -401,7 +403,7 @@ class Screen:
         if self.path_select == "challenger":
             size_name_hub = 8
         self.text_center_box(
-            hub_rect, hub.name, size_name_hub, (255, 255, 255), "consolas"
+            hub_rect, hub.name, size_name_hub, (225, 230, 240), "consolas"
         )
 
 
@@ -447,22 +449,22 @@ class Screen:
                 rect = drone_img.get_rect(center=(cx, cy))
                 self.window.blit(drone_img, rect)
             except (pygame.error, FileNotFoundError):
-                pygame.draw.circle(self.window, (255, 0, 0), (cx, cy), 15)
+                pygame.draw.circle(self.window, (255, 75, 75), (cx, cy), 15)
 
     def drawing_hub_page(self):
         self.change_background("background_hub.png")
         self.btn_quit = pygame.Rect(self.width - 200, self.height - 100, 180, 50)
-        self.text_center_box(self.btn_quit, "Quit", 20, (255, 255, 255), "consolas")
+        self.text_center_box(self.btn_quit, "Quit", 20, (225, 230, 240), "consolas")
 
         self.btn_home = pygame.Rect(self.width - 400, self.height - 100, 180, 50)
         surf = pygame.display.get_surface()
 
         temp_surf = pygame.Surface((self.btn_home.width, self.btn_home.height), pygame.SRCALPHA)
-        pygame.draw.rect(temp_surf, (21, 79, 237, 150), (0, 0, self.btn_home.width, self.btn_home.height), border_radius=15)
-        pygame.draw.rect(temp_surf, (255, 255, 255, 220), (0, 0, self.btn_home.width, self.btn_home.height), 2, border_radius=15)
+        pygame.draw.rect(temp_surf, (35, 90, 200, 160), (0, 0, self.btn_home.width, self.btn_home.height), border_radius=15)
+        pygame.draw.rect(temp_surf, (100, 160, 255, 220), (0, 0, self.btn_home.width, self.btn_home.height), 2, border_radius=15)
         
         surf.blit(temp_surf, self.btn_home.topleft)
-        self.text_center_box(self.btn_home, "Home", 20, (255, 255, 255), "consolas")
+        self.text_center_box(self.btn_home, "Home", 20, (225, 230, 240), "consolas")
 
         self.hub_zone = pygame.Rect(20, 270, self.width - 40, 680)
 
@@ -489,7 +491,7 @@ class Screen:
         current_surface = pygame.display.get_surface()
         if current_surface:
             for i, text in enumerate(lines):
-                text_surface = font.render(text, True, (255, 255, 255))
+                text_surface = font.render(text, True, (225, 230, 240))
                 current_surface.blit(text_surface, (start_x, start_y + (i * line_spacing)))
 
         self.all_transparent([self.btn_quit])

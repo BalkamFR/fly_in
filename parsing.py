@@ -25,37 +25,37 @@ def split_check_format(hub: str, separateur: str) -> list:
 def check_format_hub(hub: str):
     hub_split = split_check_format(hub, " ")
     if len(hub_split) != 5:
-        raise TypeError(f"nbr argument on hub is not good({hub_split})")
+        raise TypeError(f"[Error] Hub definition expects 5 fields (name x y [options]), got {len(hub_split)}: {hub_split}")
     try:
         int(hub_split[2])
     except ValueError:
-        raise TypeError(f"argument: ({hub_split[2]}) is not int")
+        raise TypeError(f"[Error] Hub X coordinate must be an integer, got '{hub_split[2]}'")
     try:
         int(hub_split[3])
     except ValueError:
-        raise TypeError(f"argument: ({hub_split[3]}) is not int")
+        raise TypeError(f"[Error] Hub Y coordinate must be an integer, got '{hub_split[3]}'")
     if not hub_split[4].startswith("[") or not hub_split[4].endswith("]"):
-        raise TypeError("Format setting hub is not good")
+        raise TypeError(f"[Error] Hub options must be enclosed in brackets [], got: '{hub_split[4]}'")
     if not "color" in hub_split[4] and not "[]" in hub_split[4]:
         return
     if not "=" in hub_split[4]:
-        raise TypeError("Format setting hub is not good ")
+        raise TypeError(f"[Error] Hub options require '=' assignments (e.g. [color=red]), got: '{hub_split[4]}'")
         
     setting_hub_split = hub_split[4].strip("[]").split()
     thisdict = {}
     for item in setting_hub_split:
         split_color = item.split("=")
         if len(split_color) != 2:
-            raise TabError("Format setting hub is not good")
+            raise TabError(f"[Error] Malformed hub option '{item}' — expected key=value format")
             
         key, value = split_color[0], split_color[1]
         if key != "color" and key != "max_drones" and key != "zone":
-            raise TabError(f"{key} format is not good")
+            raise TabError(f"[Error] Unknown hub option '{key}' — allowed: color, max_drones, zone")
         
         thisdict[key] = value
         
     if "color" in thisdict and thisdict["color"] not in color_good:
-        raise TabError(f"{thisdict['color']} is not good color")
+        raise TabError(f"[Error] Invalid hub color '{thisdict['color']}' — allowed: {', '.join(color_good)}")
 
 def check_double(files:str, check_double1:str, check_double2:str):
     res1:int  = 0
@@ -66,9 +66,9 @@ def check_double(files:str, check_double1:str, check_double2:str):
         if check_double2 in line:
             res2+=1
     if res1 != 1:
-        raise ValueError(f"parsing hub ({check_double1}) is not good")
+        raise ValueError(f"[Error] Expected exactly 1 '{check_double1}' definition, found {res1}")
     if res2 != 1 and len(check_double2) != 0:
-        raise ValueError(f"parsing hub ({check_double2}) is not good")
+        raise ValueError(f"[Error] Expected exactly 1 '{check_double2}' definition, found {res2}")
     return [res1, res2]
 
 def open_files(path_file:str) -> str:
@@ -119,16 +119,16 @@ class ParsingFiles:
             if "nb_drone" in line:
                 line_split = line.split(":")
                 if len(line_split) != 2:
-                    raise ValueError("[Error] format is not good")
+                    raise ValueError(f"[Error] 'nb_drone' line must use format 'nb_drone:<number>', got: '{line}'")
                 try:
                     if line_split[1]:
                         self.nb_drone = int(line_split[1])
                 except:
-                    raise ValueError("[Error]: arg nb_drone is not int")
+                    raise ValueError(f"[Error] 'nb_drone' value must be a positive integer, got: '{line_split[1].strip()}'")
                 if  int(line_split[1]) < 0:
-                    raise ValueError("[Error]: arg nb_drone cant be not is negative value")
+                    raise ValueError(f"[Error] 'nb_drone' value must be strictly positive, got: {line_split[1]}")
         if self.nb_drone == 0:
-                    raise ValueError("[Error]: arg nb_drone cant be not is negative value")
+                    raise ValueError("[Error] No 'nb_drone' field found or value is 0 — at least 1 drone required")
 
 
     def check_connection(self):
@@ -141,18 +141,18 @@ class ParsingFiles:
         for connection_name_for in self.connection.values():
             connection_name = list(connection_name_for.values())[0]
             if len(connection_name) != 2:
-                raise ValueError(f"line: ({connection_name}) is not good")
+                raise ValueError(f"[Error] Connection must link exactly 2 hubs, got: {connection_name}")
             pair = tuple(sorted(connection_name))
             if pair in seen_pairs:
-                raise ValueError(f"Duplicate connection is forbidden: {connection_name[0]}-{connection_name[1]}")
+                raise ValueError(f"[Error] Duplicate connection forbidden between '{connection_name[0]}' and '{connection_name[1]}'")
             if connection_name[0] == connection_name[1]:
-                raise ValueError(f"auto connection is forbidden: {connection_name[0]}-{connection_name[1]}")
+                raise ValueError(f"[Error] Self-loop forbidden: hub '{connection_name[0]}' cannot connect to itself")
             seen_pairs.add(pair)
             all_name_connection.append(connection_name[0])
             all_name_connection.append(connection_name[1].split()[0])
         for connection in all_name_connection:
             if connection not in self.all_name_hub and "max_link_capacity=" not in connection:
-                raise ValueError(f"{connection} is not hub")
+                raise ValueError(f"[Error] Connection references unknown hub '{connection}' — not declared in map")
         if self.start_hub.name not in all_name_connection:
             raise ValueError(f"[Error] The start hub '{self.start_hub.name}' is isolated (has no connections).")
 
@@ -170,13 +170,13 @@ class ParsingFiles:
                     if "max_link_capacity" in content:
                         max_lint = int(content.split("max_link_capacity=")[1].split()[0].strip("]"))
                         if max_lint < 1:
-                            raise ValueError(f"[Error] Invalid max_link_capacity value: {max_lint}. Must be a positive integer.")
+                            raise ValueError(f"[Error] max_link_capacity must be ≥ 1, got: {max_lint}")
                         
                     else:
                         max_lint = 1
                     self.connection.update({i:{max_lint:content.split("-")}})
                 except Exception:
-                    raise ValueError(f"[Error] Invalid connection syntax on line: '{line}'") 
+                    raise ValueError(f"[Error] Invalid connection syntax: '{line.strip()}'")
                 i+=1
         self.check_connection()
 
@@ -201,7 +201,6 @@ def pars_file(name_file:str) -> ParsingFiles:
         if "hub:" in line:
             check_format_hub(line)
     maps = ParsingFiles(file_split)
-    # control_drone = ControlDrone(maps)
     return maps
 
 
