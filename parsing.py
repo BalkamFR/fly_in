@@ -114,15 +114,17 @@ class ParsingFiles:
         self.all_name_hub: list[str] = []
         self.name_file: str = file_split[0]
         self.connection: dict[int, dict[int, list[str]]] = {}
+        self.link_capacity: dict[tuple[str, str], int] = {}
         self.nb_drone_check()
         self.hub_check()
         self.create_connection()
-
         self.create_neightbord()
         self.path_to_exit: list[Hub] = []
-        self.control_drone: ControlDrone
+        self.control_drone: ControlDrone = self._init_control_drone()
+
+    def _init_control_drone(self) -> ControlDrone:
         from drone import ControlDrone as _ControlDrone
-        self.control_drone = _ControlDrone(self)
+        return _ControlDrone(self)
 
     def create_neightbord(self) -> None:
         assert self.start_hub is not None
@@ -231,18 +233,18 @@ class ParsingFiles:
         conn_idx = 0
         line_no = 0
         seen_pairs = set()
+        assert self.start_hub is not None
+        assert self.end_hub is not None
+        declared = {
+            h.name for h in self.hub
+        }.union({
+            self.start_hub.name,
+            self.end_hub.name,
+        })
         for line in self.file_split[1:]:
             line_no += 1
             if not line:
                 continue
-            assert self.start_hub is not None
-            assert self.end_hub is not None
-            declared = {
-                h.name for h in self.hub
-            }.union({
-                self.start_hub.name,
-                self.end_hub.name,
-            })
 
             if line.startswith("connection:"):
                 content = line.split("connection:", 1)[1].strip()
@@ -335,12 +337,15 @@ class ParsingFiles:
                             )
 
                 self.connection.update({conn_idx: {max_lint: [n1, n2]}})
+                link_key = (
+                    min(n1, n2), max(n1, n2)
+                )
+                self.link_capacity[link_key] = max_lint
                 conn_idx += 1
 
         self.check_connection()
 
     def hub_check(self) -> None:
-        assert self.start_hub is None or self.start_hub is not None
         i = 0
         for line in self.file_split:
             if line.startswith("start_hub:"):
@@ -404,7 +409,9 @@ def pars_file(name_file: str) -> ParsingFiles:
                 f"[Error line {line_no}] Unknown directive"
                 f" or syntax error: '{line}'"
             )
-        if "hub:" in line:
+        if any(line.startswith(p) for p in (
+            "start_hub:", "end_hub:", "hub:"
+        )):
             check_format_hub(line, line_no)
     maps = ParsingFiles(cleaned_lines)
     return maps

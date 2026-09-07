@@ -1,0 +1,8 @@
+nb_drones: 2
+# Commentaire ligne 2
+
+# Commentaire ligne 4
+
+start_hub: start bad_x 0 [color=green]
+end_hub: goal 4 0 [color=red]
+connection: start-goal

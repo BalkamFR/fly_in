@@ -1,0 +1,122 @@
+[OK]  valid_baseline_with_comments_and_spaces
+      Attendu  : VALID
+      Résultat : SUCCESS (Carte valide acceptée sans erreur)
+
+[OK]  valid_comment_traps_with_keywords
+      Attendu  : VALID
+      Résultat : SUCCESS (Carte valide acceptée sans erreur)
+
+[OK]  valid_hub_named_hub_and_drones_substring
+      Attendu  : VALID
+      Résultat : SUCCESS (Carte valide acceptée sans erreur)
+
+[OK]  valid_empty_brackets_and_tight_syntax
+      Attendu  : VALID
+      Résultat : SUCCESS (Carte valide acceptée sans erreur)
+
+[OK]  valid_all_four_zone_types
+      Attendu  : VALID
+      Résultat : SUCCESS (Carte valide acceptée sans erreur)
+
+[OK]  line_check_nb_drones_string_line_6
+      Attendu  : INVALID (erreur sur line 6)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 6 : [Error line 6] 'nb_drone' value must be a positive integer, got: 'deux')
+
+[OK]  line_check_nb_drones_negative_line_4
+      Attendu  : INVALID (erreur sur line 4)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 4 : [Error line 4] 'nb_drone' value must be strictly positive, got: -5)
+
+[OK]  line_check_nb_drones_zero_line_5
+      Attendu  : INVALID (erreur sur line 5)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 5 : [Error line 5] 'nb_drone' value must be strictly positive, got: 0)
+
+[OK]  line_check_start_hub_bad_x_line_6
+      Attendu  : INVALID (erreur sur line 6)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 6 : [Error line 6] Hub X coordinate must be an integer, got 'bad_x')
+
+[OK]  line_check_hub_bad_y_line_7
+      Attendu  : INVALID (erreur sur line 7)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 7 : [Error line 7] Hub Y coordinate must be an integer, got 'not_an_int')
+
+[OK]  line_check_hub_missing_coordinates_line_5
+      Attendu  : INVALID (erreur sur line 5)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 5 : [Error line 5] Hub definition expects 3 fields (name x y), got 2: ['hub:', 'incomplete_hub', '10'])
+
+[OK]  line_check_invalid_zone_danger_line_8
+      Attendu  : INVALID (erreur sur line 8)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 8 : [Error line 8] Invalid zone type 'danger' — allowed: normal, blocked, restricted, priority)
+
+[OK]  line_check_hub_option_without_equal_line_6
+      Attendu  : INVALID (erreur sur line 6)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 6 : [Error line 6] Malformed hub option 'color_without_equal' — expected key=value)
+
+[OK]  line_check_hub_unknown_option_line_7
+      Attendu  : INVALID (erreur sur line 7)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 7 : [Error line 7] Unknown hub option 'speed')
+
+[OK]  line_check_max_drones_zero_line_6
+      Attendu  : INVALID (erreur sur line 6)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 6 : [Error line 6] 'max_drones' value must be strictly positive, got: '0')
+
+[OK]  line_check_max_drones_negative_line_8
+      Attendu  : INVALID (erreur sur line 8)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 8 : [Error line 8] 'max_drones' value must be strictly positive, got: '-4')
+
+[OK]  line_check_color_multiple_words_line_7
+      Attendu  : INVALID (erreur sur line 7)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 7 : [Error line 7] Malformed hub option 'blue' — expected key=value)
+
+[OK]  line_check_duplicate_start_hub_line_8
+      Attendu  : INVALID (erreur sur line 8)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 8 : [Error line 8] Expected exactly 1 'start_hub' definition, found 2)
+
+[OK]  line_check_duplicate_end_hub_line_9
+      Attendu  : INVALID (erreur sur line 9)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 9 : [Error line 9] Expected exactly 1 'end_hub' definition, found 2)
+
+[OK]  line_check_connection_three_nodes_line_7
+      Attendu  : INVALID (erreur sur line 7)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 7 : [Error line 7] Connection must link exactly 2 hubs, got: 'start-mid-goal')
+
+[OK]  line_check_connection_unknown_option_line_8
+      Attendu  : INVALID (erreur sur line 8)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 8 : [Error line 8] Unknown connection option 'priority_link' — only 'max_link_capacity' is allowed)
+
+[OK]  line_check_connection_zero_capacity_line_8
+      Attendu  : INVALID (erreur sur line 8)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 8 : [Error line 8] 'max_link_capacity' must be >= 1, got: 0)
+
+[OK]  line_check_connection_negative_capacity_line_9
+      Attendu  : INVALID (erreur sur line 9)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 9 : [Error line 9] 'max_link_capacity' must be >= 1, got: -1)
+
+[OK]  line_check_connection_empty_hub_line_7
+      Attendu  : INVALID (erreur sur line 7)
+      Résultat : SUCCESS (Erreur levée avec le bon numéro de ligne 7 : [Error line 7] Connection references unknown hub '' — not declared in map)
+
+[OK]  invalid_missing_start_hub_global
+      Attendu  : INVALID
+      Résultat : SUCCESS (Erreur globale bien levée : [Error] Missing 'start_hub:' definition)
+
+[OK]  invalid_duplicate_hub_names_global
+      Attendu  : INVALID
+      Résultat : SUCCESS (Erreur globale bien levée : [Error] Duplicate hub name 'same_name' — each hub must have a unique name)
+
+[OK]  invalid_duplicate_coordinates_global
+      Attendu  : INVALID
+      Résultat : SUCCESS (Erreur globale bien levée : [Error] Duplicate coordinates (2, 0) for hub 'h2' — each hub must have unique coordinates)
+
+[OK]  invalid_self_loop_global
+      Attendu  : INVALID
+      Résultat : SUCCESS (Erreur globale bien levée : [Error line 6] Self-loop forbidden: hub 'loop' cannot connect to itself)
+
+[OK]  invalid_duplicate_connection_reversed_global
+      Attendu  : INVALID
+      Résultat : SUCCESS (Erreur globale bien levée : [Error line 6] Duplicate connection forbidden between 'mid' and 'start')
+
+[OK]  invalid_isolated_start_hub_global
+      Attendu  : INVALID
+      Résultat : SUCCESS (Erreur globale bien levée : [Error] The start hub 'start' is isolated (has no connections).)
+
+
+Score final : 30/30 tests réussis.

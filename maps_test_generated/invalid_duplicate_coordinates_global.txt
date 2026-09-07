@@ -1,0 +1,7 @@
+nb_drones: 2
+start_hub: start 0 0 [color=green]
+hub: h1 2 0 [color=blue]
+hub: h2 2 0 [color=yellow]
+end_hub: goal 4 0 [color=red]
+connection: start-h1
+connection: h1-goal

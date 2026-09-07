@@ -1,0 +1,9 @@
+nb_drones: 2
+start_hub: start 0 0 [color=green]
+# Ligne 3
+
+# Ligne 5
+hub: broken 2 0 [color_without_equal]
+end_hub: goal 4 0 [color=red]
+connection: start-broken
+connection: broken-goal

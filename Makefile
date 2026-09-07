@@ -5,20 +5,21 @@ MAIN = main.py
 .PHONY: run, install, clean, build, lint
 
 install:
-	@python3 -m poetry install
+	@uv sync
 
 run:
-	@python3 $(MAIN) 
+	@uv run python3 $(MAIN)
 
 clean:
 	@find . -name "__pycache__" -o -name ".mypy_cache" -o -name "dist" | xargs rm -rf
 	@rm -f *.whl *.tar.gz
 	@echo "All code clean"
 
-
 debug:
-	@python3 -m poetry run python3 -m pdb $(MAIN)
+	@uv run python3 -m pdb $(MAIN)
+
+FLAKE8_FLAGS = --exclude=.venv,__pycache__,.git --max-line-length=79
 
 lint:
-	@python3 -m  mypy . $(MYPY_FLAGS)
-	@python3 -m  flake8 .
+	@uv run mypy . $(MYPY_FLAGS)
+	@uv run flake8 . $(FLAKE8_FLAGS)

@@ -1,0 +1,8 @@
+nb_drones: 2
+start_hub: start 0 0 [color=green]
+# Commentaire ligne 3
+
+hub: incomplete_hub 10 [color=blue]
+end_hub: goal 4 0 [color=red]
+connection: start-incomplete_hub
+connection: incomplete_hub-goal

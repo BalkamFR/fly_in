@@ -1,0 +1,10 @@
+nb_drones: 2
+start_hub: start 0 0 [color=green]
+# Ligne 3
+
+
+# Ligne 6
+hub: weird 2 0 [speed=100 color=blue]
+end_hub: goal 4 0 [color=red]
+connection: start-weird
+connection: weird-goal

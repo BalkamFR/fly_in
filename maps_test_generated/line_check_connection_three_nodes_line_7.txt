@@ -1,0 +1,7 @@
+nb_drones: 2
+start_hub: start 0 0 [color=green]
+hub: mid 2 0 [color=blue]
+end_hub: goal 4 0 [color=red]
+# Ligne 5
+
+connection: start-mid-goal

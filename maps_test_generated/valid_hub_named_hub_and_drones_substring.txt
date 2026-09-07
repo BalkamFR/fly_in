@@ -1,0 +1,6 @@
+nb_drones: 4
+start_hub: hub 0 0 [color=green]
+hub: station_nb_drone 2 0 [color=blue max_drones=3]
+end_hub: goal 5 0 [color=red]
+connection: hub-station_nb_drone
+connection: station_nb_drone-goal

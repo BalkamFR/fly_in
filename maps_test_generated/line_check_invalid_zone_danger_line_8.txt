@@ -1,0 +1,11 @@
+nb_drones: 2
+start_hub: start 0 0 [color=green]
+# Ligne 3
+# Ligne 4
+
+
+# Ligne 7
+hub: trap 2 0 [zone=danger color=red]
+end_hub: goal 4 0 [color=gold]
+connection: start-trap
+connection: trap-goal

@@ -49,7 +49,9 @@ def reverse_dijkstra(
 
             cost = (
                 2.0
-                if getattr(current, "zone", "normal") == "restricted"
+                if getattr(neighbor, "zone", "normal") == "restricted"
+                else 0.5
+                if getattr(neighbor, "zone", "normal") == "priority"
                 else 1.0
             )
             new_dist = dist + cost
@@ -85,31 +87,17 @@ def is_zone_free(
     return used < capacity
 
 
-def get_link_capacity(
-    h1: Hub, h2: Hub, connections: Dict[int, Dict[int, List[str]]]
-) -> int:
-    link_key = tuple(sorted([h1.name, h2.name]))
-    for val in connections.values():
-        for cap, names in val.items():
-            parsed = tuple(
-                sorted([names[0].strip(), names[1].split()[0].strip()])
-            )
-            if parsed == link_key:
-                return cap
-    return 1
-
-
 def is_link_free(
     h1: Hub,
     h2: Hub,
     turn: int,
     reservations: Dict[ReservationKey, int],
-    connections: Dict[int, Dict[int, List[str]]],
+    link_capacity: Dict[Tuple[str, str], int],
 ) -> bool:
     link_key: Tuple[str, str] = (
         min(h1.name, h2.name), max(h1.name, h2.name)
     )
-    capacity = get_link_capacity(h1, h2, connections)
+    capacity = link_capacity.get(link_key, 1)
     key: ReservationKey = (link_key, turn)
     used: int = reservations.get(key, 0)
     return used < capacity
@@ -119,9 +107,9 @@ def a_star(
     start: Hub,
     end: Hub,
     reservations: Dict[ReservationKey, int],
-    connections: Dict[int, Dict[int, List[str]]],
+    link_capacity: Dict[Tuple[str, str], int],
     true_distances: Dict[str, float],
-    max_turn: int = 150,
+    max_turn: int = 500,
 ) -> List[Tuple[Hub, int]]:
     start_h = true_distances.get(start.name, float("inf"))
     if start_h == float("inf"):
@@ -165,16 +153,23 @@ def a_star(
             if getattr(neighbor, "zone", "normal") == "blocked":
                 continue
 
-            move_time = (
+            move_time: int = (
                 2
                 if getattr(neighbor, "zone", "normal") == "restricted"
                 else 1
+            )
+            move_cost: float = (
+                2.0
+                if getattr(neighbor, "zone", "normal") == "restricted"
+                else 0.5
+                if getattr(neighbor, "zone", "normal") == "priority"
+                else 1.0
             )
             arrival_turn = current.turn + move_time
 
             if not is_link_free(
                 current.hub, neighbor, current.turn + 1,
-                reservations, connections,
+                reservations, link_capacity,
             ):
                 continue
 
@@ -184,12 +179,7 @@ def a_star(
             ):
                 continue
 
-            bonus = (
-                0.5
-                if getattr(neighbor, "zone", "normal") == "priority"
-                else 0.0
-            )
-            new_g = current.g + move_time - bonus
+            new_g = current.g + move_cost
             new_h = true_distances.get(neighbor.name, float("inf"))
 
             if new_h == float("inf"):
@@ -217,6 +207,9 @@ def start_astar_drones(scren: Screen) -> None:
 
     reservations: Dict[ReservationKey, int] = {}
     schedule: Dict[int, List[str]] = {}
+    link_capacity = scren.setting_maps.link_capacity
+    nb_drones = len(scren.control_drones.all_drone)
+    max_turn = max(500, nb_drones * 20)
 
     all_hubs: List[Hub] = (
         [start_hub, end_hub] + scren.setting_maps.hub
@@ -232,10 +225,15 @@ def start_astar_drones(scren: Screen) -> None:
             start_hub,
             end_hub,
             reservations,
-            scren.setting_maps.connection,
+            link_capacity,
             true_distances,
+            max_turn,
         )
         if not path:
+            print(
+                f"[Warning] {drone.name_drone}: no path found"
+                f" (max_turn={max_turn})"
+            )
             continue
 
         d_id = f"D{int(drone.name_drone.split('_')[1]) + 1}"
@@ -264,6 +262,13 @@ def start_astar_drones(scren: Screen) -> None:
                 reservations[link_key] = (
                     reservations.get(link_key, 0) + 1
                 )
+                if curr_turn - prev_turn == 2:
+                    link_key2: ReservationKey = (
+                        link, prev_turn + 2
+                    )
+                    reservations[link_key2] = (
+                        reservations.get(link_key2, 0) + 1
+                    )
 
             if curr_hub.name != end_hub.name:
                 zone_key: ReservationKey = (curr_hub.name, curr_turn)
@@ -289,17 +294,9 @@ def start_astar_drones(scren: Screen) -> None:
                         if turn == t:
                             if isinstance(item_raw, tuple):
                                 h1, h2 = item_raw
-                                max_cap = 1
-                                for val in (
-                                    scren.setting_maps.connection.values()
-                                ):
-                                    for cap, names in val.items():
-                                        parsed = tuple(sorted([
-                                            names[0].strip(),
-                                            names[1].split()[0].strip(),
-                                        ]))
-                                        if parsed == item_raw:
-                                            max_cap = cap
+                                max_cap = link_capacity.get(
+                                    item_raw, 1  # type: ignore[arg-type]
+                                )
                                 infos.append(
                                     f"Connection {h1}-{h2}:"
                                     f" {used}/{max_cap} capacity used"

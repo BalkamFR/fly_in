@@ -1,0 +1,9 @@
+# Ligne 1 : commentaire
+# Ligne 2 : commentaire
+   # Ligne 3 : commentaire indente
+
+# Ligne 5 : commentaire
+nb_drones: deux
+start_hub: start 0 0 [color=green]
+end_hub: goal 4 0 [color=red]
+connection: start-goal

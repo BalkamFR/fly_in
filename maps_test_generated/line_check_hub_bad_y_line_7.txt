@@ -1,0 +1,10 @@
+nb_drones: 2
+start_hub: start 0 0 [color=green]
+# Commentaire ligne 3
+
+# Commentaire ligne 5
+
+hub: mid 2 not_an_int [color=blue]
+end_hub: goal 4 0 [color=red]
+connection: start-mid
+connection: mid-goal

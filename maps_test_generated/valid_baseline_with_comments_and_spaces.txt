@@ -1,0 +1,9 @@
+# Commentaire ligne 1
+nb_drones: 3   # Commentaire inline ligne 2
+   # Commentaire avec indentation ligne 3
+start_hub:   start   0   0   [color=turquoise] # Ligne 4
+	# Tabulation ligne 5
+hub:   waypoint   2   0   [color=coral max_drones=2] # Ligne 6
+end_hub:   goal   4   0   [color=emerald] # Ligne 7
+connection: start-waypoint # Ligne 8 avec tirets-dans-le-commentaire
+connection: waypoint-goal # Ligne 9

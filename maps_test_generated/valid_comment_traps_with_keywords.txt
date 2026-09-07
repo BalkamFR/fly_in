@@ -1,0 +1,7 @@
+nb_drones: 2
+# Attention : start_hub: faux 99 99 dans commentaire
+# end_hub: fake 88 88 dans commentaire
+# connection: fake-start dans commentaire
+start_hub: start 0 0 [color=green]
+end_hub: goal 10 0 [color=red]
+connection: start-goal

@@ -1,0 +1,11 @@
+nb_drones: 2
+start_hub: start 0 0 [zone=normal color=green]
+hub: b1 1 0 [zone=blocked color=black]
+hub: p1 2 1 [zone=priority color=cyan max_drones=2]
+hub: r1 2 -1 [zone=restricted color=orange max_drones=2]
+end_hub: goal 4 0 [color=gold]
+connection: start-b1
+connection: start-p1
+connection: start-r1
+connection: p1-goal
+connection: r1-goal
