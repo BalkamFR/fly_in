@@ -29,7 +29,7 @@ def split_check_format(hub: str, separateur: str) -> list[str]:
     return new_tab
 
 
-def check_format_hub(hub: str) -> None:
+def check_format_hub(hub: str, line_no:int) -> None:
     if "[" in hub and "]" in hub:
         main_part, options_part = hub.split("[", 1)
         options_str = options_part.rstrip("]").strip()
@@ -40,29 +40,29 @@ def check_format_hub(hub: str) -> None:
     tokens = main_part.split()
     if len(tokens) != 4:
         raise ValueError(
-            f"[Error] Hub definition expects 3 fields (name x y), got {len(tokens) - 1}: {tokens}"
+            f"[Error line {line_no}] Hub definition expects 3 fields (name x y), got {len(tokens) - 1}: {tokens}"
         )
 
     try:
         int(tokens[2])
     except ValueError:
-        raise ValueError(f"[Error] Hub X coordinate must be an integer, got '{tokens[2]}'")
+        raise ValueError(f"[Error line {line_no}] Hub X coordinate must be an integer, got '{tokens[2]}'")
 
     try:
         int(tokens[3])
     except ValueError:
-        raise ValueError(f"[Error] Hub Y coordinate must be an integer, got '{tokens[3]}'")
+        raise ValueError(f"[Error line {line_no}] Hub Y coordinate must be an integer, got '{tokens[3]}'")
 
     if options_str:
         for item in options_str.split():
             split_opt = item.split("=")
             if len(split_opt) != 2:
-                raise ValueError(f"[Error] Malformed hub option '{item}' — expected key=value")
+                raise ValueError(f"[Error line {line_no}] Malformed hub option '{item}' — expected key=value")
             key, value = split_opt[0], split_opt[1]
             if key not in ("color", "max_drones", "zone"):
-                raise ValueError(f"[Error] Unknown hub option '{key}'")
+                raise ValueError(f"[Error line {line_no}] Unknown hub option '{key}'")
             if key == "color" and (not value or len(value.split()) != 1):
-                raise ValueError(f"[Error] 'color' must be a single word, got '{value}'")
+                raise ValueError(f"[Error line {line_no}] 'color' must be a single word, got '{value}'")
 
     
 def check_double(
@@ -72,21 +72,21 @@ def check_double(
     res2: int = 0
     prefix1 = f"{check_double1}:"
     prefix2 = f"{check_double2}:"
-
+    i = 0
     for line in files:
         if line.startswith(prefix1):
             res1 += 1
         if line.startswith(prefix2):
             res2 += 1
-
-    if res1 != 1:
-        raise ValueError(
-            f"[Error] Expected exactly 1 '{check_double1}' definition, found {res1}"
-        )
-    if res2 != 1 and len(check_double2) != 0:
-        raise ValueError(
-            f"[Error] Expected exactly 1 '{check_double2}' definition, found {res2}"
-        )
+        if res1 > 1:
+            raise ValueError(
+                f"[Error line {i}] Expected exactly 1 '{check_double1}' definition, found {res1}"
+            )
+        if res2 > 1 and len(check_double2) != 0:
+            raise ValueError(
+                f"[Error line {i}] Expected exactly 1 '{check_double2}' definition, found {res2}"
+            )
+        i+=1
     return [res1, res2]
 
 
@@ -275,16 +275,16 @@ class ParsingFiles:
         i = 0
         for line in self.file_split:
             if "start_hub:" in line:
-                self.start_hub = hub_good_format(line)
+                self.start_hub = hub_good_format(line, i)
             if "end_hub:" in line:
-                self.end_hub = hub_good_format(line)
+                self.end_hub = hub_good_format(line, i)
             if (
                 "hub:" in line
                 and "end_hub" not in line
                 and "start_hub" not in line
             ):
-                self.hub.append(hub_good_format(line))
-                i += 1
+                self.hub.append(hub_good_format(line,i))
+            i += 1
         assert self.start_hub is not None
         assert self.end_hub is not None
         all_names = (
@@ -320,19 +320,22 @@ def pars_file(name_file: str) -> ParsingFiles:
 
     for line in raw_lines[1:]:
         clean = line.split("#", 1)[0].strip()
-        
+        print(clean)
         if clean:
             cleaned_lines.append(clean)
 
     check_double(cleaned_lines, "start_hub", "end_hub")
+
+    i = 0
     for line in cleaned_lines[1:]:
         if "hub:" in line:
-            check_format_hub(line)
+            check_format_hub(line, i)
+        i+=1
 
     maps = ParsingFiles(cleaned_lines)
     return maps
 
-def hub_good_format(line: str) -> Hub:
+def hub_good_format(line: str, line_no:int) -> Hub:
     content = line.split(":", 1)[1].strip()
     if "[" in content and "]" in content:
         main_part, options_part = content.split("[", 1)
@@ -354,25 +357,25 @@ def hub_good_format(line: str) -> Hub:
                 key, value = item.split("=", 1)
                 if key == "color":
                     if not value or len(value.split()) != 1:
-                        raise ValueError(f"[Error line ] 'color' must be a single word, got '{value}'")
+                        raise ValueError(f"[Error line {line_no}] 'color' must be a single word, got '{value}'")
                     color = value
                 elif key == "max_drones":
                     try:
                         max_drones = int(value)
                     except ValueError:
                         raise ValueError(
-                            f"[Error] 'max_drones' value must be an"
+                            f"[Error line {line_no}] 'max_drones' value must be an"
                             f" integer, got: '{value}'"
                         )
                     if max_drones <= 0:
                         raise ValueError(
-                            f"[Error] 'max_drones' value must be strictly"
+                            f"[Error line {line_no}] 'max_drones' value must be strictly"
                             f" positive, got: {max_drones}"
                         )
                 elif key == "zone":
                     if value not in ("normal", "blocked", "restricted", "priority"):
                         raise ValueError(
-                            f"[Error] Invalid zone type '{value}' — allowed: normal, blocked, restricted, priority"
+                            f"[Error line {line_no}] Invalid zone type '{value}' — allowed: normal, blocked, restricted, priority"
                         )
                     zone = value
     hub = Hub(
