@@ -7,29 +7,8 @@ from hub import Hub
 if TYPE_CHECKING:
     from drone import ControlDrone
 
-def split_check_format(hub: str, separateur: str) -> list[str]:
-    new_tab: list[str] = []
-    temp = ""
-    dans_crochets = False
-    hub = hub.strip()
-    for char in hub:
-        if char == "[":
-            dans_crochets = True
-        elif char == "]":
-            dans_crochets = False
-        if char == separateur and not dans_crochets:
-            new_tab.append(temp)
-            temp = ""
-        else:
-            temp += char
-    if "[" in hub and "]" in hub:
-        new_tab.append(temp)
-    if "[" not in hub and "]" not in hub:
-        new_tab.append("[color=black]")
-    return new_tab
 
-
-def check_format_hub(hub: str, line_no:int) -> None:
+def check_format_hub(hub: str, line_no: int) -> None:
     if "[" in hub and "]" in hub:
         main_part, options_part = hub.split("[", 1)
         options_str = options_part.rstrip("]").strip()
@@ -40,31 +19,45 @@ def check_format_hub(hub: str, line_no:int) -> None:
     tokens = main_part.split()
     if len(tokens) != 4:
         raise ValueError(
-            f"[Error line {line_no}] Hub definition expects 3 fields (name x y), got {len(tokens) - 1}: {tokens}"
-        )
+            f"[Error line {line_no}] Hub definition expects"
+            f" 3 fields (name x y), got"
+            f" {len(tokens) - 1}: {tokens}")
 
     try:
         int(tokens[2])
     except ValueError:
-        raise ValueError(f"[Error line {line_no}] Hub X coordinate must be an integer, got '{tokens[2]}'")
+        raise ValueError(
+            f"[Error line {line_no}] Hub X coordinate"
+            f" must be an integer, got '{tokens[2]}'"
+        )
 
     try:
         int(tokens[3])
     except ValueError:
-        raise ValueError(f"[Error line {line_no}] Hub Y coordinate must be an integer, got '{tokens[3]}'")
+        raise ValueError(
+            f"[Error line {line_no}] Hub Y coordinate"
+            f" must be an integer, got '{tokens[3]}'"
+        )
 
     if options_str:
         for item in options_str.split():
             split_opt = item.split("=")
             if len(split_opt) != 2:
-                raise ValueError(f"[Error line {line_no}] Malformed hub option '{item}' — expected key=value")
+                raise ValueError(
+                    f"[Error line {line_no}] Malformed hub"
+                    f" option '{item}' — expected key=value"
+                )
             key, value = split_opt[0], split_opt[1]
             if key not in ("color", "max_drones", "zone"):
-                raise ValueError(f"[Error line {line_no}] Unknown hub option '{key}'")
+                raise ValueError(
+                    f"[Error line {line_no}] Unknown hub option '{key}'")
             if key == "color" and (not value or len(value.split()) != 1):
-                raise ValueError(f"[Error line {line_no}] 'color' must be a single word, got '{value}'")
+                raise ValueError(
+                    f"[Error line {line_no}] 'color' must"
+                    f" be a single word, got '{value}'"
+                )
 
-    
+
 def check_double(
     files: list[str], check_double1: str, check_double2: str
 ) -> list[int]:
@@ -80,15 +73,20 @@ def check_double(
             res2 += 1
         if res1 > 1:
             raise ValueError(
-                f"[Error line {i}] Expected exactly 1 '{check_double1}' definition, found {res1}"
+                f"[Error line {i}] Expected exactly 1"
+                f" '{check_double1}' definition, found {res1}"
             )
         if res2 > 1 and len(check_double2) != 0:
             raise ValueError(
-                f"[Error line {i}] Expected exactly 1 '{check_double2}' definition, found {res2}"
+                f"[Error line {i}] Expected exactly 1"
+                f" '{check_double2}' definition, found {res2}"
             )
-        i+=1
+        i += 1
+    if res1 == 0:
+        raise ValueError(f"[Error] Missing '{check_double1}:' definition")
+    if res2 == 0 and len(check_double2) != 0:
+        raise ValueError(f"[Error] Missing '{check_double2}:' definition")
     return [res1, res2]
-
 
 
 def open_files(path_file: str) -> str:
@@ -146,31 +144,44 @@ class ParsingFiles:
                         hub2.neighbors.append(hub1)
 
     def nb_drone_check(self) -> None:
-        for line in self.file_split:
-            if "nb_drone" in line:
-                line_split = line.split(":")
-                if len(line_split) != 2:
+        found = False
+        line_no = 0
+        for line in self.file_split[1:]:
+            line_no += 1
+            if not line:
+                continue
+            if line.startswith("nb_drone:") or line.startswith("nb_drones:"):
+                if found:
                     raise ValueError(
-                        f"[Error] 'nb_drone' line must use format"
-                        f" 'nb_drone:<number>', got: '{line}'"
+                        f"[Error line {line_no}] Duplicate"
+                        f" 'nb_drones' definition — only 1 allowed"
+                    )
+                found = True
+
+                line_split = line.split(":")
+                if len(line_split) != 2 or not line_split[1].strip():
+                    raise ValueError(
+                        f"[Error line {line_no}] 'nb_drone'"
+                        f" line must use format 'nb_drone:<number>'"
                     )
                 try:
-                    if line_split[1]:
-                        self.nb_drone = int(line_split[1])
+                    val = int(line_split[1].strip())
                 except ValueError:
                     raise ValueError(
-                        f"[Error] 'nb_drone' value must be a positive"
-                        f" integer, got: '{line_split[1].strip()}'"
+                        f"[Error line {line_no}] 'nb_drone' value"
+                        f" must be a positive integer, got:"
+                        f" '{line_split[1].strip()}'"
                     )
-                if int(line_split[1]) < 0:
+                if val <= 0:
                     raise ValueError(
-                        f"[Error] 'nb_drone' value must be strictly"
-                        f" positive, got: {line_split[1]}"
+                        f"[Error line {line_no}] 'nb_drone' value"
+                        f" must be strictly positive, got: {val}"
                     )
-        if self.nb_drone == 0:
+                self.nb_drone = val
+
+        if not found:
             raise ValueError(
-                "[Error] No 'nb_drone' field found or value is 0"
-                " — at least 1 drone required"
+                "[Error] No 'nb_drone' field found — at least 1 drone required"
             )
 
     def check_connection(self) -> None:
@@ -203,15 +214,7 @@ class ParsingFiles:
             seen_pairs.add(pair)
             all_name_connection.append(connection_name[0])
             all_name_connection.append(connection_name[1].split()[0])
-        for connection in all_name_connection:
-            if (
-                connection not in self.all_name_hub
-                and "max_link_capacity=" not in connection
-            ):
-                raise ValueError(
-                    f"[Error] Connection references unknown hub"
-                    f" '{connection}' — not declared in map"
-                )
+
         if self.start_hub.name not in all_name_connection:
             raise ValueError(
                 f"[Error] The start hub '{self.start_hub.name}'"
@@ -225,65 +228,128 @@ class ParsingFiles:
             )
 
     def create_connection(self) -> None:
-        i = 0
-        for line in self.file_split:
-            if line.startswith("connection: "):
-                try:
-                    content = line.split("connection:", 1)[1].strip()
-                    max_lint = 0
-                    if "max_link_capacity" in content:
-                        max_lint = int(
-                            content
-                            .split("max_link_capacity=")[1]
-                            .split()[0]
-                            .strip("]")
+        conn_idx = 0
+        line_no = 0
+        seen_pairs = set()
+        for line in self.file_split[1:]:
+            line_no += 1
+            if not line:
+                continue
+            assert self.start_hub is not None
+            assert self.end_hub is not None
+            declared = {
+                h.name for h in self.hub
+            }.union({
+                self.start_hub.name,
+                self.end_hub.name,
+            })
+
+            if line.startswith("connection:"):
+                content = line.split("connection:", 1)[1].strip()
+                if not content:
+                    raise ValueError(
+                        f"[Error line {line_no}] Empty connection definition"
+                    )
+
+                if "[" in content:
+                    if not content.endswith("]"):
+                        raise ValueError(
+                            f"[Error line {line_no}] Connection"
+                            f" options must be enclosed in brackets '[]'"
                         )
+                    main_part, bracket_part = content.split("[", 1)
+                    opt_str = bracket_part.rstrip("]").strip()
+                else:
+                    main_part = content
+                    opt_str = ""
+
+                nodes = main_part.split("-")
+                if len(nodes) != 2:
+                    raise ValueError(
+                        f"[Error line {line_no}] Connection must"
+                        f" link exactly 2 hubs, got:"
+                        f" '{main_part.strip()}'"
+                    )
+
+                n1 = nodes[0].strip()
+                n2 = nodes[1].strip()
+                if n1 not in declared:
+                    raise ValueError(
+                        f"[Error line {line_no}] Connection"
+                        f" references unknown hub '{n1}'"
+                        f" — not declared in map"
+                    )
+                if n2 not in declared:
+                    raise ValueError(
+                        f"[Error line {line_no}] Connection"
+                        f" references unknown hub '{n2}'"
+                        f" — not declared in map"
+                    )
+                if n1 == n2:
+                    raise ValueError(
+                        f"[Error line {line_no}] Self-loop forbidden:"
+                        f" hub '{n1}' cannot connect to itself"
+                    )
+                if not n1 or not n2:
+                    raise ValueError(
+                        f"[Error line {line_no}] Hub names"
+                        f" in connection cannot be empty"
+                    )
+                pair = tuple(sorted([n1, n2]))
+                if pair in seen_pairs:
+                    raise ValueError(
+                        f"[Error line {line_no}] Duplicate connection"
+                        f" forbidden between '{n1}' and '{n2}'"
+                    )
+                seen_pairs.add(pair)
+
+                max_lint = 1
+                if opt_str:
+                    for item in opt_str.split():
+                        if "=" not in item:
+                            raise ValueError(
+                                f"[Error line {line_no}] Malformed"
+                                f" connection option '{item}'"
+                                f" — expected key=value"
+                            )
+                        key, value = item.split("=", 1)
+                        if key != "max_link_capacity":
+                            raise ValueError(
+                                f"[Error line {line_no}] Unknown"
+                                f" connection option '{key}' — only"
+                                f" 'max_link_capacity' is allowed"
+                            )
+                        try:
+                            max_lint = int(value)
+                        except ValueError:
+                            raise ValueError(
+                                f"[Error line {line_no}]"
+                                f" 'max_link_capacity' must be"
+                                f" an integer, got: '{value}'"
+                            )
                         if max_lint < 1:
                             raise ValueError(
-                                f"[Error] max_link_capacity must be"
+                                f"[Error line {line_no}]"
+                                f" 'max_link_capacity' must be"
                                 f" >= 1, got: {max_lint}"
                             )
-                        if "[" in content:
-                            bracket_content = (
-                                content.split("[")[1].split("]")[0]
-                            )
-                            for item in bracket_content.split():
-                                if "=" in item:
-                                    key = item.split("=")[0]
-                                    if key != "max_link_capacity":
-                                        raise ValueError(
-                                            f"[Error] Unknown connection"
-                                            f" option '{key}' — only"
-                                            f" 'max_link_capacity'"
-                                            f" is allowed"
-                                        )
-                    else:
-                        max_lint = 1
-                    self.connection.update(
-                        {i: {max_lint: content.split("-")}}
-                    )
-                except Exception:
-                    raise ValueError(
-                        f"[Error] Invalid connection syntax:"
-                        f" '{line.strip()}'"
-                    )
-                i += 1
+
+                self.connection.update({conn_idx: {max_lint: [n1, n2]}})
+                conn_idx += 1
+
         self.check_connection()
 
     def hub_check(self) -> None:
         assert self.start_hub is None or self.start_hub is not None
         i = 0
         for line in self.file_split:
-            if "start_hub:" in line:
+            if line.startswith("start_hub:"):
                 self.start_hub = hub_good_format(line, i)
-            if "end_hub:" in line:
+
+            elif line.startswith("end_hub:"):
                 self.end_hub = hub_good_format(line, i)
-            if (
-                "hub:" in line
-                and "end_hub" not in line
-                and "start_hub" not in line
-            ):
-                self.hub.append(hub_good_format(line,i))
+            elif line.startswith("hub:"):
+                self.hub.append(hub_good_format(line, i))
             i += 1
         assert self.start_hub is not None
         assert self.end_hub is not None
@@ -320,22 +386,31 @@ def pars_file(name_file: str) -> ParsingFiles:
 
     for line in raw_lines[1:]:
         clean = line.split("#", 1)[0].strip()
-        print(clean)
-        if clean:
-            cleaned_lines.append(clean)
+        cleaned_lines.append(clean)
 
     check_double(cleaned_lines, "start_hub", "end_hub")
-
-    i = 0
-    for line in cleaned_lines[1:]:
+    valide_prefix = (
+        "nb_drone:",
+        "nb_drones:",
+        "start_hub:",
+        "end_hub:",
+        "hub:",
+        "connection:")
+    for line_no, line in enumerate(cleaned_lines[1:], start=1):
+        if not line:
+            continue
+        if not any(line.startswith(p) for p in valide_prefix):
+            raise ValueError(
+                f"[Error line {line_no}] Unknown directive"
+                f" or syntax error: '{line}'"
+            )
         if "hub:" in line:
-            check_format_hub(line, i)
-        i+=1
-
+            check_format_hub(line, line_no)
     maps = ParsingFiles(cleaned_lines)
     return maps
 
-def hub_good_format(line: str, line_no:int) -> Hub:
+
+def hub_good_format(line: str, line_no: int) -> Hub:
     content = line.split(":", 1)[1].strip()
     if "[" in content and "]" in content:
         main_part, options_part = content.split("[", 1)
@@ -343,9 +418,13 @@ def hub_good_format(line: str, line_no:int) -> Hub:
     else:
         main_part = content
         options_str = ""
-
     tokens = main_part.split()
     name = tokens[0]
+    if "-" in name:
+        raise ValueError(
+            f"[Error line {line_no}] Hub name '{name}'"
+            f" cannot contain dashes ('-')"
+        )
     x = int(tokens[1])
     y = int(tokens[2])
     color = "black"
@@ -353,29 +432,33 @@ def hub_good_format(line: str, line_no:int) -> Hub:
     zone = "normal"
     if options_str:
         for item in options_str.split():
-            if "=" in item: 
+            if "=" in item:
                 key, value = item.split("=", 1)
                 if key == "color":
                     if not value or len(value.split()) != 1:
-                        raise ValueError(f"[Error line {line_no}] 'color' must be a single word, got '{value}'")
+                        raise ValueError(
+                            f"[Error line {line_no}] 'color'"
+                            f" must be a single word, got '{value}'"
+                        )
                     color = value
                 elif key == "max_drones":
-                    try:
-                        max_drones = int(value)
-                    except ValueError:
+                    if not value.isdigit() or int(value) <= 0:
                         raise ValueError(
-                            f"[Error line {line_no}] 'max_drones' value must be an"
-                            f" integer, got: '{value}'"
+                            f"[Error line {line_no}] 'max_drones'"
+                            f" value must be strictly positive,"
+                            f" got: '{value}'"
                         )
-                    if max_drones <= 0:
-                        raise ValueError(
-                            f"[Error line {line_no}] 'max_drones' value must be strictly"
-                            f" positive, got: {max_drones}"
-                        )
+                    max_drones = int(value)
                 elif key == "zone":
-                    if value not in ("normal", "blocked", "restricted", "priority"):
+                    if value not in (
+                        "normal",
+                        "blocked",
+                        "restricted",
+                            "priority"):
                         raise ValueError(
-                            f"[Error line {line_no}] Invalid zone type '{value}' — allowed: normal, blocked, restricted, priority"
+                            f"[Error line {line_no}] Invalid zone"
+                            f" type '{value}' — allowed:"
+                            f" normal, blocked, restricted, priority"
                         )
                     zone = value
     hub = Hub(
