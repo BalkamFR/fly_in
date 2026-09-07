@@ -7,13 +7,6 @@ from hub import Hub
 if TYPE_CHECKING:
     from drone import ControlDrone
 
-color_good = [
-    "red", "blue", "green", "yellow", "orange", "purple",
-    "black", "white", "cyan", "brown", "lime", "magenta",
-    "gold", "maroon", "darkred", "violet", "crimson", "rainbow",
-]
-
-
 def split_check_format(hub: str, separateur: str) -> list[str]:
     new_tab: list[str] = []
     temp = ""
@@ -37,84 +30,65 @@ def split_check_format(hub: str, separateur: str) -> list[str]:
 
 
 def check_format_hub(hub: str) -> None:
-    hub_split = split_check_format(hub, " ")
-    if len(hub_split) != 5:
-        raise TypeError(
-            f"[Error] Hub definition expects 5 fields (name x y [options]),"
-            f" got {len(hub_split)}: {hub_split}"
+    if "[" in hub and "]" in hub:
+        main_part, options_part = hub.split("[", 1)
+        options_str = options_part.rstrip("]").strip()
+    else:
+        main_part = hub
+        options_str = ""
+
+    tokens = main_part.split()
+    if len(tokens) != 4:
+        raise ValueError(
+            f"[Error] Hub definition expects 3 fields (name x y), got {len(tokens) - 1}: {tokens}"
         )
+
     try:
-        int(hub_split[2])
+        int(tokens[2])
     except ValueError:
-        raise TypeError(
-            f"[Error] Hub X coordinate must be an integer,"
-            f" got '{hub_split[2]}'"
-        )
+        raise ValueError(f"[Error] Hub X coordinate must be an integer, got '{tokens[2]}'")
+
     try:
-        int(hub_split[3])
+        int(tokens[3])
     except ValueError:
-        raise TypeError(
-            f"[Error] Hub Y coordinate must be an integer,"
-            f" got '{hub_split[3]}'"
-        )
-    if not hub_split[4].startswith("[") or not hub_split[4].endswith("]"):
-        raise TypeError(
-            f"[Error] Hub options must be enclosed in brackets [],"
-            f" got: '{hub_split[4]}'"
-        )
-    if "=" not in hub_split[4]:
-        raise TypeError(
-            f"[Error] Hub options require '=' assignments"
-            f" (e.g. [color=red]), got: '{hub_split[4]}'"
-        )
+        raise ValueError(f"[Error] Hub Y coordinate must be an integer, got '{tokens[3]}'")
 
-    setting_hub_split = hub_split[4].strip("[]").split()
-    thisdict: dict[str, str] = {}
-    for item in setting_hub_split:
-        split_color = item.split("=")
-        if len(split_color) != 2:
-            raise TabError(
-                f"[Error] Malformed hub option '{item}'"
-                f" — expected key=value format"
-            )
+    if options_str:
+        for item in options_str.split():
+            split_opt = item.split("=")
+            if len(split_opt) != 2:
+                raise ValueError(f"[Error] Malformed hub option '{item}' — expected key=value")
+            key, value = split_opt[0], split_opt[1]
+            if key not in ("color", "max_drones", "zone"):
+                raise ValueError(f"[Error] Unknown hub option '{key}'")
+            if key == "color" and (not value or len(value.split()) != 1):
+                raise ValueError(f"[Error] 'color' must be a single word, got '{value}'")
 
-        key, value = split_color[0], split_color[1]
-        if key not in ("color", "max_drones", "zone"):
-            raise TabError(
-                f"[Error] Unknown hub option '{key}'"
-                f" — allowed: color, max_drones, zone"
-            )
-
-        thisdict[key] = value
-
-    if "color" in thisdict and thisdict["color"] not in color_good:
-        raise TabError(
-            f"[Error] Invalid hub color '{thisdict['color']}'"
-            f" — allowed: {', '.join(color_good)}"
-        )
-
-
+    
 def check_double(
     files: list[str], check_double1: str, check_double2: str
 ) -> list[int]:
     res1: int = 0
     res2: int = 0
+    prefix1 = f"{check_double1}:"
+    prefix2 = f"{check_double2}:"
+
     for line in files:
-        if check_double1 in line:
+        if line.startswith(prefix1):
             res1 += 1
-        if check_double2 in line:
+        if line.startswith(prefix2):
             res2 += 1
+
     if res1 != 1:
         raise ValueError(
-            f"[Error] Expected exactly 1 '{check_double1}'"
-            f" definition, found {res1}"
+            f"[Error] Expected exactly 1 '{check_double1}' definition, found {res1}"
         )
     if res2 != 1 and len(check_double2) != 0:
         raise ValueError(
-            f"[Error] Expected exactly 1 '{check_double2}'"
-            f" definition, found {res2}"
+            f"[Error] Expected exactly 1 '{check_double2}' definition, found {res2}"
         )
     return [res1, res2]
+
 
 
 def open_files(path_file: str) -> str:
@@ -340,14 +314,23 @@ class ParsingFiles:
 
 def pars_file(name_file: str) -> ParsingFiles:
     files_str = open_files(name_file)
-    file_split = files_str.split("\n")
-    check_double(file_split, "start_hub", "end_hub")
-    for line in file_split:
+    raw_lines = files_str.split("\n")
+
+    cleaned_lines: list[str] = [raw_lines[0]]
+
+    for line in raw_lines[1:]:
+        clean = line.split("#", 1)[0].strip()
+        
+        if clean:
+            cleaned_lines.append(clean)
+
+    check_double(cleaned_lines, "start_hub", "end_hub")
+    for line in cleaned_lines[1:]:
         if "hub:" in line:
             check_format_hub(line)
-    maps = ParsingFiles(file_split)
-    return maps
 
+    maps = ParsingFiles(cleaned_lines)
+    return maps
 
 def hub_good_format(line: str) -> Hub:
     content = line.split(":", 1)[1].strip()
@@ -358,17 +341,8 @@ def hub_good_format(line: str) -> Hub:
         main_part = content
         options_str = ""
 
-    RESERVED_NAMES = {
-        "hub", "start_hub", "end_hub",
-        "connection", "nb_drones", "nb_drone",
-    }
     tokens = main_part.split()
     name = tokens[0]
-    if name in RESERVED_NAMES:
-        raise ValueError(
-            f"[Error] Hub name '{name}' is a reserved keyword"
-            f" — choose a different name"
-        )
     x = int(tokens[1])
     y = int(tokens[2])
     color = "black"
@@ -376,9 +350,11 @@ def hub_good_format(line: str) -> Hub:
     zone = "normal"
     if options_str:
         for item in options_str.split():
-            if "=" in item:
+            if "=" in item: 
                 key, value = item.split("=", 1)
                 if key == "color":
+                    if not value or len(value.split()) != 1:
+                        raise ValueError(f"[Error line ] 'color' must be a single word, got '{value}'")
                     color = value
                 elif key == "max_drones":
                     try:
@@ -394,6 +370,10 @@ def hub_good_format(line: str) -> Hub:
                             f" positive, got: {max_drones}"
                         )
                 elif key == "zone":
+                    if value not in ("normal", "blocked", "restricted", "priority"):
+                        raise ValueError(
+                            f"[Error] Invalid zone type '{value}' — allowed: normal, blocked, restricted, priority"
+                        )
                     zone = value
     hub = Hub(
         name=name,

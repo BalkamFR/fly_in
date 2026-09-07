@@ -546,26 +546,6 @@ class Screen:
             size = 100
         if self.path_select == "challenger":
             size = 70
-        color_map: dict[str, Tuple[int, int, int]] = {
-            "red": (200, 60, 70),
-            "blue": (50, 120, 220),
-            "green": (40, 150, 90),
-            "yellow": (230, 190, 50),
-            "orange": (220, 130, 45),
-            "purple": (120, 80, 190),
-            "black": (40, 42, 50),
-            "white": (225, 230, 240),
-            "cyan": (50, 190, 220),
-            "brown": (140, 80, 35),
-            "lime": (90, 195, 80),
-            "magenta": (200, 80, 200),
-            "gold": (220, 190, 50),
-            "maroon": (130, 30, 30),
-            "darkred": (150, 30, 30),
-            "violet": (180, 120, 210),
-            "crimson": (200, 50, 65),
-            "rainbow": (220, 120, 170),
-        }
 
         start_hub: Hub = self.setting_maps.start_hub
         end_hub: Hub = self.setting_maps.end_hub
@@ -598,8 +578,10 @@ class Screen:
         )
 
         radius = size // 2
-        color_rgb = color_map.get(hub.color, (128, 128, 128))
-
+        try:
+            color_rgb = pygame.Color(hub.color)
+        except ValueError:
+            color_rgb = pygame.Color(128, 128, 128)
         pygame.draw.circle(self.window, color_rgb, (cx, cy), radius)
         pygame.draw.circle(
             self.window, (180, 200, 230), (cx, cy), radius, width=2
