@@ -9,6 +9,20 @@ if TYPE_CHECKING:
 
 
 def check_format_hub(hub: str, line_no: int) -> None:
+    """Validates the raw text format of a hub definition line.
+
+    Checks that the main part contains exactly 4 whitespace-separated
+    tokens (prefix, name, x, y) and that x/y are valid integers. Also
+    validates any optional key=value pairs inside brackets.
+
+    Args:
+        hub: The full hub definition string (e.g. "hub: a 1 2 [color=red]").
+        line_no: Line number in the source file, used for error messages.
+
+    Raises:
+        ValueError: If the token count, coordinate types, or option
+            keys/values are invalid.
+    """
     if "[" in hub and "]" in hub:
         main_part, options_part = hub.split("[", 1)
         options_str = options_part.rstrip("]").strip()
@@ -61,6 +75,24 @@ def check_format_hub(hub: str, line_no: int) -> None:
 def check_double(
     files: list[str], check_double1: str, check_double2: str
 ) -> list[int]:
+    """Ensures that two required directives appear exactly once each.
+
+    Scans the file lines for the two directive prefixes and raises an
+    error if either is absent or appears more than once.
+
+    Args:
+        files: List of lines from the cleaned input file.
+        check_double1: The first directive name to check (e.g. "start_hub").
+        check_double2: The second directive name to check (e.g. "end_hub").
+            Pass an empty string to skip checking the second directive.
+
+    Returns:
+        A list [count1, count2] of occurrence counts for each directive.
+
+    Raises:
+        ValueError: If a directive appears more than once or is missing
+            entirely.
+    """
     res1: int = 0
     res2: int = 0
     prefix1 = f"{check_double1}:"
@@ -90,6 +122,18 @@ def check_double(
 
 
 def open_files(path_file: str) -> str:
+    """Reads a map file and prepends its filename as the first line.
+
+    Args:
+        path_file: Absolute or relative path to the map text file.
+
+    Returns:
+        A string whose first line is the filename (without directory path)
+        and whose remaining content is the raw file text.
+
+    Raises:
+        ValueError: If the file is empty.
+    """
     files = ""
     with open(path_file) as f:
         files_read = str(f.read())
@@ -105,7 +149,37 @@ def open_files(path_file: str) -> str:
 
 
 class ParsingFiles:
+    """Parses and validates a drone map file into a structured model.
+
+    Reads the text file line by line, extracts hubs, connections, and
+    the drone count, performs semantic checks (duplicates, unknown names,
+    self-loops, isolated hubs), then builds the neighbour graph and
+    instantiates the ControlDrone fleet.
+
+    Attributes:
+        file_split: Cleaned list of lines from the source file.
+        nb_drone: Number of drones declared in the file.
+        start_hub: The starting hub for all drones.
+        end_hub: The target hub all drones must reach.
+        hub: List of intermediate hub objects.
+        all_name_hub: Flat list of all hub names (start + end + intermediates).
+        name_file: Filename extracted from the first line of file_split.
+        connection: Nested dict {index: {capacity: [name1, name2]}}.
+        link_capacity: Mapping of sorted (name1, name2) to max link capacity.
+        path_to_exit: Pre-computed path list (populated externally).
+        control_drone: The ControlDrone fleet manager created from this data.
+    """
+
     def __init__(self, file_split: list[str]) -> None:
+        """Initializes and validates the parsed map from split file lines.
+
+        Sequentially runs all parsing and validation steps, then
+        instantiates the drone fleet.
+
+        Args:
+            file_split: Lines of the map file with the filename on
+                line 0 and map content on subsequent lines.
+        """
         self.file_split = file_split
         self.nb_drone: int = 0
         self.start_hub: Optional[Hub] = None
@@ -123,10 +197,23 @@ class ParsingFiles:
         self.control_drone: ControlDrone = self._init_control_drone()
 
     def _init_control_drone(self) -> ControlDrone:
+        """Lazily imports and instantiates ControlDrone to avoid cycles.
+
+        Returns:
+            A fully initialised ControlDrone fleet for this map.
+        """
         from drone import ControlDrone as _ControlDrone
         return _ControlDrone(self)
 
     def create_neightbord(self) -> None:
+        """Builds the bidirectional neighbour lists from the connection data.
+
+        Iterates all parsed connections and registers each hub pair as
+        mutual neighbours if not already linked.
+
+        Raises:
+            AssertionError: If start_hub or end_hub is None.
+        """
         assert self.start_hub is not None
         assert self.end_hub is not None
         all_hubs = {h.name: h for h in self.hub}
@@ -146,6 +233,16 @@ class ParsingFiles:
                         hub2.neighbors.append(hub1)
 
     def nb_drone_check(self) -> None:
+        """Parses and validates the nb_drone directive from the file.
+
+        Ensures exactly one nb_drone/nb_drones line is present, that the
+        value can be parsed as a strictly positive integer, and stores the
+        result in self.nb_drone.
+
+        Raises:
+            ValueError: If the directive is missing, duplicated, badly
+                formatted, or non-positive.
+        """
         found = False
         line_no = 0
         for line in self.file_split[1:]:
@@ -187,6 +284,17 @@ class ParsingFiles:
             )
 
     def check_connection(self) -> None:
+        """Validates semantic correctness of all parsed connections.
+
+        Checks that every connection links exactly 2 distinct, declared
+        hubs, that no pair is duplicated, and that both start and end hubs
+        appear at least once in the connection list (not isolated).
+
+        Raises:
+            AssertionError: If start_hub or end_hub is None.
+            ValueError: For duplicate connections, self-loops, unknown hubs,
+                wrong arity, or isolated start/end hubs.
+        """
         assert self.start_hub is not None
         assert self.end_hub is not None
         all_name_connection: list[str] = []
@@ -230,6 +338,17 @@ class ParsingFiles:
             )
 
     def create_connection(self) -> None:
+        """Parses all connection directives from the file into self.connection.
+
+        Reads lines starting with "connection:", validates both hub names,
+        detects duplicate pairs and self-loops, parses the optional
+        max_link_capacity option, and populates self.link_capacity.
+
+        Raises:
+            AssertionError: If start_hub or end_hub is None.
+            ValueError: For syntax errors, unknown hubs, duplicate or
+                self-looping connections, or invalid options.
+        """
         conn_idx = 0
         line_no = 0
         seen_pairs = set()
@@ -346,6 +465,16 @@ class ParsingFiles:
         self.check_connection()
 
     def hub_check(self) -> None:
+        """Parses all hub directives and validates uniqueness of names/coords.
+
+        Reads start_hub, end_hub, and hub lines, creates Hub objects via
+        hub_good_format, then checks for duplicate names and duplicate
+        (x, y) coordinates across all hubs.
+
+        Raises:
+            AssertionError: If start_hub or end_hub is missing after parsing.
+            ValueError: For duplicate hub names or duplicate coordinates.
+        """
         i = 0
         for line in self.file_split:
             if line.startswith("start_hub:"):
@@ -384,6 +513,21 @@ class ParsingFiles:
 
 
 def pars_file(name_file: str) -> ParsingFiles:
+    """Top-level entry point to read, clean, and parse a map file.
+
+    Opens the file, strips inline comments (``#``), validates global
+    structure (duplicate directives, unknown keywords, hub format), then
+    delegates full parsing to ParsingFiles.
+
+    Args:
+        name_file: Path to the map file to parse.
+
+    Returns:
+        A fully validated ParsingFiles instance ready for simulation.
+
+    Raises:
+        ValueError: For any structural or semantic error found in the file.
+    """
     files_str = open_files(name_file)
     raw_lines = files_str.split("\n")
 
@@ -418,6 +562,24 @@ def pars_file(name_file: str) -> ParsingFiles:
 
 
 def hub_good_format(line: str, line_no: int) -> Hub:
+    """Creates a Hub object from a single validated directive line.
+
+    Parses the hub name, coordinates, and optional metadata (color,
+    max_drones, zone) from the formatted line. Rejects hub names that
+    contain dashes, and validates all option values.
+
+    Args:
+        line: A raw directive line such as
+            "hub: roof1 3 4 [zone=restricted color=red]".
+        line_no: Line number in the source file, used for error messages.
+
+    Returns:
+        A Hub instance initialised from the parsed values.
+
+    Raises:
+        ValueError: If the hub name contains a dash, if coordinates are
+            invalid, or if option values are out of range or unrecognised.
+    """
     content = line.split(":", 1)[1].strip()
     if "[" in content and "]" in content:
         main_part, options_part = content.split("[", 1)

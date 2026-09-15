@@ -17,13 +17,55 @@ def drawing_function_menu(
     width: int,
     height: int,
 ) -> None:
+    """Draws a solid blue rectangle as a generic menu element.
+
+    Args:
+        window: The Pygame surface to draw onto.
+        x: Left edge x-coordinate of the rectangle.
+        y: Top edge y-coordinate of the rectangle.
+        width: Width of the rectangle in pixels.
+        height: Height of the rectangle in pixels.
+    """
     pygame.draw.rect(window, (35, 90, 200), [x, y, width, height])
 
 
 class Screen:
+    """Main Pygame window controller for the Fly-In simulation.
+
+    Manages initialisation, event handling, page routing (start page /
+    hub page), map selection, and all rendering for hubs, connections,
+    and drones.
+
+    Attributes:
+        setting_maps: Parsed map data, or None if no map is loaded.
+        control_drones: Active drone fleet, or None if not yet created.
+        zoom: Current zoom level (unused in rendering but kept for future use).
+        path_select: Difficulty folder name currently selected
+            ("easy", "medium", "hard", "challenger").
+        path: Path object pointing to the selected maps sub-folder.
+        width: Window width in pixels.
+        height: Window height in pixels.
+        background: Loaded and scaled background Pygame surface.
+        name_program: Title string displayed in the window title bar.
+        window: The main Pygame display surface.
+        first_color: Default text colour used across the UI.
+        files_select: Sorted list of map filenames in the selected folder.
+        virtual_surface: Off-screen surface for compositing (reserved).
+        error_message: Last parsing error string shown to the user, or "".
+    """
+
     def __init__(
         self, setting_maps: Optional[ParsingFiles] = None
     ) -> None:
+        """Initialises Pygame, the window, and all UI state.
+
+        If setting_maps is provided the simulation will jump straight to
+        the hub page after the first frame (auto-start mode).
+
+        Args:
+            setting_maps: Pre-parsed map to load immediately, or None to
+                start on the map-selection page.
+        """
         pygame.init()
         self.setting_maps = setting_maps
         self.control_drones: Optional[ControlDrone] = (
@@ -50,16 +92,33 @@ class Screen:
         self.error_message = ""
 
     def create_drone(self) -> None:
+        """Attaches the drone fleet from the currently loaded map.
+
+        Raises:
+            AssertionError: If setting_maps is None.
+        """
         assert self.setting_maps is not None
         self.control_drones = self.setting_maps.control_drone
 
     def change_background(self, path: str) -> None:
+        """Loads and scales a background image to fill the window.
+
+        Args:
+            path: Filename (without directory) inside the ``img/`` folder.
+        """
         bg_image = pygame.image.load(f"img/{path}")
         self.background = pygame.transform.smoothscale(
             bg_image, (self.width, self.height)
         )
 
     def display(self) -> None:
+        """Runs the main Pygame event loop at 60 fps.
+
+        Handles window close, button clicks (map selection, difficulty,
+        start, quit, home), keyboard space-bar to trigger A* planning,
+        and per-frame drone animation ticks. Routes rendering to either
+        drawing_start_page or drawing_hub_page based on the current page.
+        """
         clock = pygame.time.Clock()
         running = True
         page = "start_page"
@@ -178,6 +237,15 @@ class Screen:
         color: Tuple[int, int, int],
         font: str,
     ) -> None:
+        """Renders text centered inside a given rectangle.
+
+        Args:
+            box: The bounding rectangle to center the text within.
+            text: The string to render.
+            police: Font size in points.
+            color: RGB colour tuple for the text.
+            font: System font name (e.g. "consolas").
+        """
         self.font = pygame.font.SysFont(font, police)
         text_surface = self.font.render(text, True, color)
         text_rect = text_surface.get_rect()
@@ -192,6 +260,15 @@ class Screen:
         color: Tuple[int, int, int],
         font: str,
     ) -> None:
+        """Renders text left-aligned with padding inside a rectangle.
+
+        Args:
+            box: The bounding rectangle whose left edge anchors the text.
+            text: The string to render.
+            police: Font size in points.
+            color: RGB colour tuple for the text.
+            font: System font name (e.g. "consolas").
+        """
         padding = 15
         self.font = pygame.font.SysFont(font, police)
         text_surface = self.font.render(text, True, color)
@@ -204,6 +281,17 @@ class Screen:
         list_box: List[pygame.Rect],
         flag: Optional[bool] = None,
     ) -> None:
+        """Draws semi-transparent rounded-rectangle panels for UI elements.
+
+        The last two items in list_box receive special accent colours
+        (red for the last, green for the second-to-last) unless flag is
+        set, in which case all panels use the default dark-blue style.
+
+        Args:
+            list_box: List of rectangles to draw as glass panels.
+            flag: If not None, disables the red/green accent colouring
+                for the last two panels.
+        """
         radius = 15
         border_width = 2
         color_font: Tuple[int, int, int, int] = 20, 24, 38, 220
@@ -233,6 +321,7 @@ class Screen:
             i += 1
 
     def header(self) -> None:
+        """Draws the translucent top header bar with the program title."""
         header_rect = pygame.Rect(0, 0, self.width, 220)
         menu_surface = pygame.Surface(header_rect.size, pygame.SRCALPHA)
         menu_surface.fill((15, 18, 30, 160))
@@ -247,6 +336,17 @@ class Screen:
         start_y: int,
         all_btn: List[str],
     ) -> None:
+        """Renders the scrollable list of map file buttons in the left panel.
+
+        Each button is a clickable transparent panel labelled with the
+        map filename. The resulting list is stored in self.map_buttons for
+        hit-testing in the event loop.
+
+        Args:
+            start_x: Left edge x-position of the panel column.
+            start_y: Top edge y-position of the first button.
+            all_btn: List of map filenames to display as buttons.
+        """
         self.map_buttons: List[Tuple[str, pygame.Rect]] = []
 
         size_height = 220
@@ -270,6 +370,12 @@ class Screen:
             i += padding
 
     def drawing_start_page(self) -> None:
+        """Renders the full map-selection start page.
+
+        Draws the background, left map list panel, right info/error panel,
+        difficulty filter buttons (Easy/Medium/Hard/Challenger), the Start
+        and Quit buttons, and the header.
+        """
         self.change_background("background.png")
         self.detail_card = pygame.Rect(
             (self.width - 400), (self.height - 820), 380, 60
@@ -460,6 +566,21 @@ class Screen:
         self.header()
 
     def draw_connections(self, size: int = 100) -> None:
+        """Draws lines between all connected hub pairs on the hub page.
+
+        Scales hub coordinates to fit within hub_zone and uses the
+        current difficulty colour for the connection lines. Restricted
+        zones that span two map units are traversed in the same manner as
+        single-step zones from the rendering perspective.
+
+        Args:
+            size: Base circle size used to compute the margin offset so
+                lines terminate at hub edges rather than centres.
+                Overridden by difficulty level internally.
+
+        Raises:
+            AssertionError: If setting_maps, start_hub, or end_hub is None.
+        """
         assert self.setting_maps is not None
         assert self.setting_maps.start_hub is not None
         assert self.setting_maps.end_hub is not None
@@ -507,6 +628,14 @@ class Screen:
         offset_y = (usable_h - (range_y * scale)) / 2
 
         def to_pixels(target_hub: Hub) -> Tuple[int, int]:
+            """Converts hub grid coordinates to window pixel coordinates.
+
+            Args:
+                target_hub: The hub whose coordinates are converted.
+
+            Returns:
+                A (px, py) tuple of pixel coordinates within hub_zone.
+            """
             px = int(
                 self.hub_zone.x
                 + margin
@@ -535,6 +664,19 @@ class Screen:
                     )
 
     def create_hub(self, hub: Hub, size: int = 100) -> None:
+        """Renders a single hub as a coloured circle with its name label.
+
+        Scales the hub's grid coordinates to pixel coordinates within the
+        hub_zone, draws a filled circle in the hub's colour, an outline
+        ring, and the hub name centered inside.
+
+        Args:
+            hub: The hub to render.
+            size: Base circle diameter in pixels, overridden by difficulty.
+
+        Raises:
+            AssertionError: If setting_maps, start_hub, or end_hub is None.
+        """
         assert self.setting_maps is not None
         assert self.setting_maps.start_hub is not None
         assert self.setting_maps.end_hub is not None
@@ -598,6 +740,17 @@ class Screen:
         )
 
     def draw_all_drones(self) -> None:
+        """Renders all drones at their current interpolated positions.
+
+        Scales drone (pos_x, pos_y) from grid units to pixel coordinates
+        within hub_zone using the same transform as the hub renderer.
+        Tries to load the drone sprite image; falls back to a red circle
+        if the image file is missing or invalid.
+
+        Raises:
+            AssertionError: If setting_maps, control_drones, start_hub,
+                or end_hub is None.
+        """
         assert self.setting_maps is not None
         assert self.control_drones is not None
         assert self.setting_maps.start_hub is not None
@@ -657,6 +810,15 @@ class Screen:
                 )
 
     def drawing_hub_page(self) -> None:
+        """Renders the hub-page view showing the loaded map and drone fleet.
+
+        Draws the hub background, info overlay (map name, drone/hub/link
+        counts), Quit and Home buttons, the hub_zone area with all
+        connections and hub circles, all drones, and finally the header.
+
+        Raises:
+            AssertionError: If setting_maps, start_hub, or end_hub is None.
+        """
         assert self.setting_maps is not None
         assert self.setting_maps.start_hub is not None
         assert self.setting_maps.end_hub is not None
